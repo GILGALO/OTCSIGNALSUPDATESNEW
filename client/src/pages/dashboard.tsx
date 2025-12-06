@@ -10,8 +10,9 @@ import { StatsPanel } from '@/components/stats-panel';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Bell, Settings, User, Zap, Timer, Shield, Activity } from 'lucide-react';
+import { Bell, Settings, User, Zap, Timer, Shield, Activity, Clock } from 'lucide-react';
 import bgImage from '@assets/generated_images/deep_cyber_blue_and_purple_futuristic_data_background.png';
+import { format } from 'date-fns';
 
 export default function Dashboard() {
   const [selectedAsset, setSelectedAsset] = useState('EUR/USD');
@@ -19,6 +20,23 @@ export default function Dashboard() {
   const [mode, setMode] = useState<'AUTO' | 'MANUAL'>('AUTO');
   const [isAutoActive, setIsAutoActive] = useState(true); // Toggle for auto mode
   const [showSettings, setShowSettings] = useState(false);
+  const [currentTimeUTC4, setCurrentTimeUTC4] = useState('');
+
+  // Update UTC-4 time every second
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const utc4Offset = -4 * 60;
+      const localOffset = now.getTimezoneOffset();
+      const diff = utc4Offset - localOffset;
+      const utc4Time = new Date(now.getTime() + diff * 60000);
+      setCurrentTimeUTC4(format(utc4Time, 'HH:mm:ss'));
+    };
+    
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Load SSID from storage on mount
   useEffect(() => {
@@ -106,6 +124,12 @@ export default function Dashboard() {
         </div>
 
         <div className="flex items-center gap-4">
+          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 border border-white/10">
+            <Clock className="w-3 h-3 text-primary" />
+            <span className="text-[10px] font-mono text-primary font-bold">{currentTimeUTC4}</span>
+            <span className="text-[9px] text-muted-foreground">UTC-4</span>
+          </div>
+          
           <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 border border-white/10">
             <Shield className="w-3 h-3 text-primary" />
             <span className="text-[10px] font-mono text-muted-foreground">SSID: <span className="text-primary">{ssid ? `...${ssid.slice(-4)}` : 'N/A'}</span></span>
