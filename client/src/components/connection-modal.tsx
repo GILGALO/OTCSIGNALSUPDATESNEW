@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -46,21 +46,21 @@ export function ConnectionModal() {
       setError('Please enter a valid SSID');
       return;
     }
-    
+
     setLoading(true);
     setError('');
-    
+
     // Simulate connection validation
     setTimeout(() => {
       setLoading(false);
-      
+
       // Save to localStorage with 30 day expiry
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + 30);
-      
+
       localStorage.setItem(SSID_STORAGE_KEY, ssid);
       localStorage.setItem(SSID_EXPIRY_KEY, expiryDate.toISOString());
-      
+
       setOpen(false);
       // Force reload to update app state if needed
       window.location.reload(); 
@@ -80,7 +80,7 @@ export function ConnectionModal() {
               Connect to Pocket Option
             </h2>
           </div>
-          
+
           <p className="text-sm text-muted-foreground">
             Enter your SSID to sync real-time market data.
           </p>
@@ -106,7 +106,7 @@ export function ConnectionModal() {
               Note: Your SSID is saved locally and will auto-connect until expiration.
             </div>
           </div>
-          
+
           <div className="flex justify-end pt-2">
             <Button onClick={handleConnect} disabled={loading || !ssid} className="w-full font-bold tracking-wide bg-primary text-primary-foreground hover:bg-primary/90">
               {loading ? (
