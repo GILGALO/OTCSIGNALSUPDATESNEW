@@ -26,10 +26,10 @@ export default function Dashboard() {
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
-      const utc4Offset = -4 * 60;
-      const localOffset = now.getTimezoneOffset();
-      const diff = utc4Offset - localOffset;
-      const utc4Time = new Date(now.getTime() + diff * 60000);
+      // Get UTC time first
+      const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+      // Subtract 4 hours (UTC-4)
+      const utc4Time = new Date(utcTime - (4 * 60 * 60 * 1000));
       setCurrentTimeUTC4(format(utc4Time, 'HH:mm:ss'));
     };
     

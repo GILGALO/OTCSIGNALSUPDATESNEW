@@ -24,10 +24,10 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
   // Helper to get UTC-4 time
   const getUTC4Time = () => {
     const now = new Date();
-    const utc4Offset = -4 * 60; // UTC-4 in minutes
-    const localOffset = now.getTimezoneOffset();
-    const diff = utc4Offset - localOffset;
-    return new Date(now.getTime() + diff * 60000);
+    // Get UTC time first
+    const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+    // Subtract 4 hours (UTC-4)
+    return new Date(utcTime - (4 * 60 * 60 * 1000));
   };
 
   // Get next M5 candle open time
