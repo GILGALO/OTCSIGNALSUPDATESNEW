@@ -8,15 +8,35 @@ import { RecentSignals } from '@/components/recent-signals';
 import { SettingsPanel } from '@/components/settings-panel';
 import { StatsPanel } from '@/components/stats-panel';
 import { Button } from '@/components/ui/button';
-import { Wifi, WifiOff, Bell, Settings, User, Zap, Timer, Shield } from 'lucide-react';
-import bgImage from '@assets/generated_images/dark_futuristic_fintech_trading_background.png';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Bell, Settings, User, Zap, Timer, Shield, Activity } from 'lucide-react';
+import bgImage from '@assets/generated_images/deep_cyber_blue_and_purple_futuristic_data_background.png';
 
 export default function Dashboard() {
   const [selectedAsset, setSelectedAsset] = useState('EUR/USD');
-  const [isConnected, setIsConnected] = useState(true);
-  const [ssid, setSsid] = useState('ArmnzVp0xR-_NrLWs');
+  const [ssid, setSsid] = useState('');
   const [mode, setMode] = useState<'AUTO' | 'MANUAL'>('AUTO');
+  const [isAutoActive, setIsAutoActive] = useState(true); // Toggle for auto mode
   const [showSettings, setShowSettings] = useState(false);
+
+  // Load SSID from storage on mount
+  useEffect(() => {
+    const savedSsid = localStorage.getItem('pocket_option_ssid');
+    if (savedSsid) {
+      setSsid(savedSsid);
+    }
+  }, []);
+
+  // Update SSID when changed in settings
+  const handleSsidChange = (newSsid: string) => {
+      setSsid(newSsid);
+      localStorage.setItem('pocket_option_ssid', newSsid);
+      // Reset expiry if saving manually from settings
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + 30);
+      localStorage.setItem('pocket_option_ssid_expiry', expiryDate.toISOString());
+  };
 
   // Apply background image to body
   useEffect(() => {
@@ -30,61 +50,81 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-black/80 backdrop-blur-[2px] text-foreground flex flex-col font-sans selection:bg-primary/30">
+    <div className="min-h-screen bg-transparent text-foreground flex flex-col font-sans selection:bg-primary/30">
+      <div className="scan-line fixed inset-0 pointer-events-none z-50"></div>
       <ConnectionModal />
       <SettingsPanel 
         open={showSettings} 
         onOpenChange={setShowSettings} 
         currentSsid={ssid}
-        onSaveSsid={setSsid}
+        onSaveSsid={handleSsidChange}
       />
       
       {/* Header */}
-      <header className="h-16 border-b border-white/5 flex items-center justify-between px-6 bg-[#0a0a0a]/80 backdrop-blur-xl sticky top-0 z-50 shadow-2xl">
+      <header className="h-16 border-b border-white/5 flex items-center justify-between px-6 bg-[#0a0a0a]/70 backdrop-blur-xl sticky top-0 z-40 shadow-2xl">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-green-700 flex items-center justify-center font-black text-background text-xl shadow-[0_0_15px_rgba(0,255,157,0.3)]">P</div>
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center font-black text-background text-xl shadow-[0_0_20px_rgba(var(--primary),0.5)] glow-box-primary">P</div>
           <div>
-            <h1 className="font-bold text-lg tracking-tight leading-none">POCKET <span className="text-primary">PRO</span></h1>
-            <span className="text-[10px] text-muted-foreground font-mono tracking-widest uppercase">AI Trading Assistant</span>
+            <h1 className="font-bold text-lg tracking-tight leading-none text-white">POCKET <span className="text-primary text-neon-blue">PRO</span></h1>
+            <span className="text-[10px] text-muted-foreground font-mono tracking-widest uppercase flex items-center gap-1">
+                <Activity className="w-3 h-3 text-primary" /> AI Trading Assistant
+            </span>
           </div>
         </div>
         
         {/* Mode Switcher */}
-        <div className="hidden md:flex items-center bg-secondary/50 p-1 rounded-lg border border-white/5">
-          <button 
-            onClick={() => setMode('AUTO')}
-            className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2 ${mode === 'AUTO' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-muted-foreground hover:text-foreground'}`}
-          >
-            <Timer className="w-3 h-3" /> AUTO
-          </button>
-          <button 
-             onClick={() => setMode('MANUAL')}
-             className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2 ${mode === 'MANUAL' ? 'bg-accent text-accent-foreground shadow-lg' : 'text-muted-foreground hover:text-foreground'}`}
-          >
-            <Zap className="w-3 h-3" /> MANUAL
-          </button>
+        <div className="hidden md:flex items-center gap-6 bg-secondary/30 p-2 rounded-xl border border-white/5 backdrop-blur-md">
+           
+           <div className="flex items-center gap-2">
+               <button 
+                onClick={() => setMode('AUTO')}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${mode === 'AUTO' ? 'bg-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.4)]' : 'text-muted-foreground hover:text-foreground'}`}
+               >
+                <Timer className="w-3 h-3" /> AUTO
+               </button>
+               <button 
+                onClick={() => setMode('MANUAL')}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${mode === 'MANUAL' ? 'bg-accent text-accent-foreground shadow-[0_0_15px_rgba(var(--accent),0.4)]' : 'text-muted-foreground hover:text-foreground'}`}
+               >
+                <Zap className="w-3 h-3" /> MANUAL
+               </button>
+           </div>
+
+           {mode === 'AUTO' && (
+               <div className="flex items-center gap-2 pl-4 border-l border-white/10">
+                   <Switch 
+                    id="auto-active" 
+                    checked={isAutoActive}
+                    onCheckedChange={setIsAutoActive}
+                    className="data-[state=checked]:bg-primary"
+                   />
+                   <Label htmlFor="auto-active" className={`text-xs font-mono font-bold ${isAutoActive ? 'text-primary text-neon-blue' : 'text-muted-foreground'}`}>
+                       {isAutoActive ? 'ACTIVE' : 'PAUSED'}
+                   </Label>
+               </div>
+           )}
         </div>
 
         <div className="flex items-center gap-4">
           <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 border border-white/10">
             <Shield className="w-3 h-3 text-primary" />
-            <span className="text-[10px] font-mono text-muted-foreground">SSID: <span className="text-primary">...{ssid.slice(-4)}</span></span>
+            <span className="text-[10px] font-mono text-muted-foreground">SSID: <span className="text-primary">{ssid ? `...${ssid.slice(-4)}` : 'N/A'}</span></span>
           </div>
           
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground hover:bg-white/5">
+          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-full">
             <Bell className="w-5 h-5" />
           </Button>
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground hover:bg-white/5" onClick={() => setShowSettings(true)}>
+          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-full" onClick={() => setShowSettings(true)}>
             <Settings className="w-5 h-5" />
           </Button>
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary/20 to-accent/20 border border-white/10 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary/20 to-accent/20 border border-white/10 flex items-center justify-center ring-2 ring-white/5">
             <User className="w-4 h-4 text-primary" />
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-[1600px] mx-auto w-full">
+      <main className="flex-1 p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-[1600px] mx-auto w-full z-10">
         
         {/* Left Sidebar - Asset List */}
         <div className="lg:col-span-3 h-full flex flex-col gap-4">
@@ -105,7 +145,7 @@ export default function Dashboard() {
 
         {/* Right Sidebar - Signal & Analysis */}
         <div className="lg:col-span-3 space-y-6 flex flex-col">
-          <SignalCard mode={mode} />
+          <SignalCard mode={mode} isAutoActive={isAutoActive} />
           <div className="flex-1">
             <MarketAnalysis />
           </div>

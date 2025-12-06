@@ -1,16 +1,16 @@
 import { useEffect, useState, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowUp, ArrowDown, Zap, Activity, Crosshair, Timer, PlayCircle, Radio } from 'lucide-react';
+import { ArrowUp, ArrowDown, Zap, Activity, Crosshair, Timer, Radio, PauseCircle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 
 interface SignalCardProps {
   mode: 'AUTO' | 'MANUAL';
-  isAnalyzing?: boolean;
+  isAutoActive?: boolean;
 }
 
-export function SignalCard({ mode }: SignalCardProps) {
+export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
   const [signal, setSignal] = useState<'CALL' | 'PUT' | 'WAIT'>('WAIT');
   const [confidence, setConfidence] = useState(0);
   const [expiryTime, setExpiryTime] = useState(0);
@@ -22,7 +22,7 @@ export function SignalCard({ mode }: SignalCardProps) {
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
-    if (mode === 'AUTO') {
+    if (mode === 'AUTO' && isAutoActive) {
       interval = setInterval(() => {
         setAutoTimer((prev) => {
           if (prev <= 1) {
@@ -34,11 +34,11 @@ export function SignalCard({ mode }: SignalCardProps) {
         });
       }, 1000);
     } else {
-      setAutoTimer(7 * 60); // Reset if switched out
+        // If paused or switched out, maintain state but stop countdown
     }
 
     return () => clearInterval(interval);
-  }, [mode]);
+  }, [mode, isAutoActive]);
 
   // Signal Expiry Countdown
   useEffect(() => {
@@ -80,17 +80,21 @@ export function SignalCard({ mode }: SignalCardProps) {
     <Card className="relative p-6 glass-panel border-t-2 border-t-white/10 overflow-hidden flex flex-col items-center justify-center min-h-[350px]">
       {/* Decorative Background Elements */}
       <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
-      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-20" />
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-50" />
       
       {/* Header Status */}
       <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
-        <Badge variant="outline" className={`font-mono text-[10px] border-white/10 ${mode === 'AUTO' ? 'text-accent bg-accent/10' : 'text-orange-400 bg-orange-400/10'}`}>
+        <Badge variant="outline" className={`font-mono text-[10px] border-white/10 ${mode === 'AUTO' ? 'text-primary bg-primary/10' : 'text-accent bg-accent/10'}`}>
           {mode} MODE
         </Badge>
         {mode === 'AUTO' && (
            <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
-             <Timer className="w-3 h-3" />
-             NEXT SCAN: <span className="text-foreground font-bold">{formatTime(autoTimer)}</span>
+             <Timer className={`w-3 h-3 ${isAutoActive ? 'animate-pulse text-primary' : ''}`} />
+             {isAutoActive ? (
+                 <>NEXT SCAN: <span className="text-foreground font-bold text-neon-blue">{formatTime(autoTimer)}</span></>
+             ) : (
+                 <span className="text-destructive font-bold">PAUSED</span>
+             )}
            </div>
         )}
       </div>
@@ -106,21 +110,32 @@ export function SignalCard({ mode }: SignalCardProps) {
                <Radio className="w-8 h-8 text-primary animate-pulse" />
              </div>
              <div className="space-y-2 text-center w-full">
-               <span className="text-sm font-bold animate-pulse text-primary">SCANNING MARKETS...</span>
-               <Progress value={scanProgress} className="h-1 bg-secondary" />
+               <span className="text-sm font-bold animate-pulse text-primary text-neon-blue">SCANNING MARKETS...</span>
+               <Progress value={scanProgress} className="h-1 bg-secondary" indicatorClassName="bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]" />
              </div>
            </div>
         ) : signal === 'WAIT' ? (
           <div className="flex flex-col items-center gap-6">
-            <div className="w-32 h-32 rounded-full bg-secondary/30 border border-white/5 flex items-center justify-center relative group">
-              <div className="absolute inset-0 rounded-full bg-primary/5 animate-ping opacity-20" />
-              <Crosshair className="w-12 h-12 text-muted-foreground group-hover:text-primary transition-colors duration-500" />
+            <div className="w-40 h-40 rounded-full bg-secondary/30 border border-white/5 flex items-center justify-center relative group backdrop-blur-sm">
+              
+              {mode === 'AUTO' && !isAutoActive ? (
+                  <>
+                    <PauseCircle className="w-16 h-16 text-muted-foreground opacity-50" />
+                    <div className="absolute bottom-8 text-[10px] text-muted-foreground font-mono tracking-widest">SYSTEM PAUSED</div>
+                  </>
+              ) : (
+                  <>
+                    <div className="absolute inset-0 rounded-full bg-primary/5 animate-ping opacity-20" />
+                    <div className="absolute inset-2 rounded-full border border-primary/20 animate-spin-slow opacity-50 border-t-transparent border-b-transparent" />
+                    <Crosshair className="w-16 h-16 text-primary/50 group-hover:text-primary transition-colors duration-500" />
+                  </>
+              )}
             </div>
             
             {mode === 'MANUAL' ? (
               <Button 
                 size="lg" 
-                className="bg-primary hover:bg-primary/90 text-background font-black tracking-wide px-8 py-6 text-lg shadow-[0_0_20px_rgba(0,255,157,0.3)]"
+                className="bg-primary hover:bg-primary/90 text-background font-black tracking-wide px-8 py-6 text-lg shadow-[0_0_30px_rgba(var(--primary),0.4)] transition-all hover:scale-105 active:scale-95"
                 onClick={generateSignal}
               >
                 <Zap className="w-5 h-5 mr-2" />
@@ -128,40 +143,45 @@ export function SignalCard({ mode }: SignalCardProps) {
               </Button>
             ) : (
               <div className="text-center space-y-1">
-                <h3 className="text-lg font-bold text-muted-foreground">WAITING FOR SIGNAL</h3>
-                <p className="text-xs text-muted-foreground/60 font-mono">AI ANALYZING PRICE ACTION...</p>
+                <h3 className="text-lg font-bold text-muted-foreground">
+                    {isAutoActive ? 'WAITING FOR SIGNAL' : 'AUTO-TRADING PAUSED'}
+                </h3>
+                <p className="text-xs text-muted-foreground/60 font-mono">
+                    {isAutoActive ? 'AI ANALYZING PRICE ACTION...' : 'RESUME TO START SCANNING'}
+                </p>
               </div>
             )}
           </div>
         ) : (
           <div className="flex flex-col items-center gap-6 z-10 w-full animate-in zoom-in duration-300">
-            <div className={`relative flex items-center justify-center w-40 h-40 rounded-full border-8 ${signal === 'CALL' ? 'border-primary bg-primary/10 shadow-[0_0_50px_rgba(0,255,157,0.4)]' : 'border-destructive bg-destructive/10 shadow-[0_0_50px_rgba(255,0,85,0.4)]'}`}>
+            <div className={`relative flex items-center justify-center w-48 h-48 rounded-full border-8 ${signal === 'CALL' ? 'border-primary bg-primary/10 shadow-[0_0_60px_rgba(var(--primary),0.4)]' : 'border-destructive bg-destructive/10 shadow-[0_0_60px_rgba(var(--destructive),0.4)]'}`}>
+              <div className="absolute inset-0 rounded-full border-2 border-white/10 animate-ping opacity-20"></div>
               {signal === 'CALL' ? (
-                <ArrowUp className="w-20 h-20 text-primary drop-shadow-[0_0_15px_rgba(0,255,157,0.8)]" />
+                <ArrowUp className="w-24 h-24 text-primary drop-shadow-[0_0_20px_rgba(var(--primary),0.8)] animate-bounce" />
               ) : (
-                <ArrowDown className="w-20 h-20 text-destructive drop-shadow-[0_0_15px_rgba(255,0,85,0.8)]" />
+                <ArrowDown className="w-24 h-24 text-destructive drop-shadow-[0_0_20px_rgba(var(--destructive),0.8)] animate-bounce" />
               )}
-              <div className="absolute -bottom-3 bg-background px-3 py-1 rounded-full border border-white/10 text-xs font-black tracking-widest">
-                M1
+              <div className="absolute -bottom-4 bg-background px-4 py-1 rounded-full border border-white/10 text-xs font-black tracking-widest uppercase shadow-lg">
+                M1 Expiry
               </div>
             </div>
 
             <div className="text-center space-y-2">
-              <h1 className={`text-6xl font-black tracking-tighter ${signal === 'CALL' ? 'text-primary text-neon-green' : 'text-destructive text-neon-red'}`}>
+              <h1 className={`text-7xl font-black tracking-tighter ${signal === 'CALL' ? 'text-primary text-neon-blue' : 'text-destructive text-neon-pink'}`}>
                 {signal}
               </h1>
-              <div className="flex items-center justify-center gap-2 text-sm font-mono text-muted-foreground bg-black/40 px-3 py-1 rounded-lg border border-white/5">
-                <Timer className="w-3 h-3" />
-                <span>EXPIRES IN {expiryTime}s</span>
+              <div className="flex items-center justify-center gap-2 text-sm font-mono text-muted-foreground bg-black/40 px-4 py-1.5 rounded-lg border border-white/5 backdrop-blur-md">
+                <Timer className="w-4 h-4 text-primary" />
+                <span>EXPIRES IN <span className="text-white font-bold">{expiryTime}s</span></span>
               </div>
             </div>
 
-            <div className="w-full space-y-2 px-4">
+            <div className="w-full space-y-3 px-4">
               <div className="flex justify-between text-xs font-mono font-bold">
-                <span className="text-muted-foreground">PROBABILITY</span>
+                <span className="text-muted-foreground">PROBABILITY SCORE</span>
                 <span className={signal === 'CALL' ? 'text-primary' : 'text-destructive'}>{confidence}%</span>
               </div>
-              <Progress value={confidence} className="h-3 bg-secondary" indicatorClassName={signal === 'CALL' ? 'bg-primary shadow-[0_0_10px_rgba(0,255,157,0.5)]' : 'bg-destructive shadow-[0_0_10px_rgba(255,0,85,0.5)]'} />
+              <Progress value={confidence} className="h-4 bg-secondary" indicatorClassName={signal === 'CALL' ? 'bg-primary shadow-[0_0_15px_rgba(var(--primary),0.6)]' : 'bg-destructive shadow-[0_0_15px_rgba(var(--destructive),0.6)]'} />
             </div>
           </div>
         )}
