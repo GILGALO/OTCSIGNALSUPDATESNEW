@@ -30,23 +30,35 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
     return new Date(now.getTime() + diff * 60000);
   };
 
-  // Auto Mode Logic
+  // Get next M5 candle open time
+  const getNextCandleOpen = () => {
+    const now = getUTC4Time();
+    const minutes = now.getMinutes();
+    const seconds = now.getSeconds();
+    
+    // Calculate minutes until next 5-minute mark (0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55)
+    const nextCandleMinute = Math.ceil(minutes / 5) * 5;
+    const minutesUntilNext = nextCandleMinute - minutes;
+    const secondsUntilNext = (minutesUntilNext * 60) - seconds;
+    
+    return secondsUntilNext;
+  };
+
+  // Auto Mode Logic - Wait for exact candle open
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
     if (mode === 'AUTO' && isAutoActive) {
+      // Check every second if we're at a candle open
       interval = setInterval(() => {
-        setAutoTimer((prev) => {
-          if (prev <= 1) {
-             // Trigger auto generation
-             generateSignal();
-             return 10 * 60; // Reset to 10 mins analysis window
-          }
-          return prev - 1;
-        });
+        const secondsToNext = getNextCandleOpen();
+        setAutoTimer(secondsToNext);
+        
+        // Trigger signal EXACTLY when candle opens (within 1 second tolerance)
+        if (secondsToNext <= 1) {
+          generateSignal();
+        }
       }, 1000);
-    } else {
-        // If paused or switched out, maintain state but stop countdown
     }
 
     return () => clearInterval(interval);
@@ -114,9 +126,18 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
     const newSignal = Math.random() > 0.5 ? 'CALL' : 'PUT';
     const newConfidence = Math.floor(Math.random() * (97 - 85) + 85); // 85-97% accuracy range
     
-    // Get UTC-4 times (Pocket Option timezone)
-    const startTimeUTC4 = getUTC4Time();
-    const endTimeUTC4 = addMinutes(startTimeUTC4, 5); // M5 = 5 minute expiry
+    // Get UTC-4 times (Pocket Option timezone) - EXACT candle open
+    const now = getUTC4Time();
+    const minutes = now.getMinutes();
+    const currentCandleMinute = Math.floor(minutes / 5) * 5;
+    
+    // Set to exact candle open time (round down to nearest 5-min mark, 0 seconds)
+    const startTimeUTC4 = new Date(now);
+    startTimeUTC4.setMinutes(currentCandleMinute);
+    startTimeUTC4.setSeconds(0);
+    startTimeUTC4.setMilliseconds(0);
+    
+    const endTimeUTC4 = addMinutes(startTimeUTC4, 5); // M5 = 5 minute expiry (next candle open)
     const allowanceEndTimeUTC4 = addMinutes(startTimeUTC4, 10); // 10 minute allowance window
     
     // Generate realistic price data
@@ -142,15 +163,15 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
     const momentums = ['STRONG', 'MODERATE', 'WEAK'];
     const momentum = momentums[Math.floor(Math.random() * momentums.length)];
     
-    // Prepare Telegram message with 10-minute allowance
+    // Prepare Telegram message with exact candle timing
     const telegramMsg = `🚀 <b>NEW SIGNAL ALERT (${mode})</b> 🚀
 
 📊 <b>Pair:</b> ${selectedPair}
 ⚡ <b>Type:</b> ${newSignal === 'CALL' ? '🟢 BUY/CALL' : '🔴 SELL/PUT'}
-⏱ <b>Timeframe:</b> M5
-⏰ <b>Start Time (UTC-4):</b> ${format(startTimeUTC4, 'HH:mm')}
-🏁 <b>End Time (UTC-4):</b> ${format(endTimeUTC4, 'HH:mm')}
-⏳ <b>Entry Window:</b> ${format(startTimeUTC4, 'HH:mm')} - ${format(allowanceEndTimeUTC4, 'HH:mm')} (10 min allowance)
+⏱ <b>Timeframe:</b> M5 (5-Minute Candle)
+🕐 <b>Candle Open (UTC-4):</b> ${format(startTimeUTC4, 'HH:mm:ss')}
+🏁 <b>Candle Close (UTC-4):</b> ${format(endTimeUTC4, 'HH:mm:ss')}
+⏳ <b>Entry Window:</b> ${format(startTimeUTC4, 'HH:mm:ss')} - ${format(endTimeUTC4, 'HH:mm:ss')} (EXACT 5-min candle)
 
 🎯 <b>Entry:</b> ${entryPrice}
 🛑 <b>Stop Loss:</b> ${sl}
@@ -167,9 +188,12 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
 • High-probability setup identified
 • ${newSignal === 'CALL' ? 'Bullish momentum building' : 'Bearish pressure increasing'}
 • Price action confirms ${newSignal === 'CALL' ? 'upward' : 'downward'} move
-• Enter within 10-minute window for optimal results
+• ENTER EXACTLY AT CANDLE OPEN for best results
 
-⚠️ <b>Risk Management:</b> Use proper position sizing`;
+⚠️ <b>Risk Management:</b> 
+• Entry ONLY at candle open (${format(startTimeUTC4, 'HH:mm:ss')} UTC-4)
+• Exit at candle close (${format(endTimeUTC4, 'HH:mm:ss')} UTC-4)
+• Use proper position sizing`;
 
     console.log("📤 Sending signal to Telegram:", telegramMsg);
     
@@ -182,7 +206,7 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
 
     setSignal(newSignal);
     setConfidence(newConfidence);
-    setExpiryTime(600); // 10 minutes (600 seconds) for entry allowance
+    setExpiryTime(300); // 5 minutes (300 seconds) - exact M5 candle duration
     setIsScanning(false);
   };
 
@@ -207,7 +231,7 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
            <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
              <Timer className={`w-3 h-3 ${isAutoActive ? 'animate-pulse text-primary' : ''}`} />
              {isAutoActive ? (
-                 <>NEXT ENTRY: <span className="text-foreground font-bold text-neon-blue">{formatTime(autoTimer)}</span></>
+                 <>NEXT M5 CANDLE: <span className="text-foreground font-bold text-neon-blue">{formatTime(autoTimer)}</span></>
              ) : (
                  <span className="text-destructive font-bold">PAUSED</span>
              )}
@@ -226,7 +250,7 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
                <Radio className="w-10 h-10 text-primary animate-pulse" />
              </div>
              <div className="space-y-2 text-center w-full">
-               <span className="text-sm font-bold animate-pulse text-primary text-neon-blue">ANALYZING 10m WINDOW...</span>
+               <span className="text-sm font-bold animate-pulse text-primary text-neon-blue">WAITING FOR M5 CANDLE OPEN...</span>
                <Progress value={scanProgress} className="h-1 bg-secondary" indicatorClassName="bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]" />
                <p className="text-[10px] text-muted-foreground font-mono">Calculating Entry Points...</p>
              </div>
@@ -290,10 +314,10 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
               <div className="flex flex-col items-center gap-2">
                  <div className="flex items-center justify-center gap-2 text-sm font-mono text-muted-foreground bg-black/40 px-4 py-1.5 rounded-lg border border-white/5 backdrop-blur-md">
                    <Timer className="w-4 h-4 text-primary" />
-                   <span>ENTRY WINDOW: <span className="text-white font-bold">{formatTime(expiryTime)}</span></span>
+                   <span>M5 CANDLE EXPIRES: <span className="text-white font-bold">{formatTime(expiryTime)}</span></span>
                  </div>
                  <div className="text-[10px] text-muted-foreground font-mono">
-                   10-Minute Entry Allowance • UTC-4 Timezone
+                   Exact 5-Min Candle Entry • No Mid-Candle Entries • UTC-4
                  </div>
                  
                  {lastSignalSent && (
