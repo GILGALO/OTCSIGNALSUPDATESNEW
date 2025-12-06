@@ -44,18 +44,19 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
     return secondsUntilNext;
   };
 
-  // Auto Mode Logic - Wait for exact candle open
+  // Auto Mode Logic - Send signal 5 minutes BEFORE candle opens
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
     if (mode === 'AUTO' && isAutoActive) {
-      // Check every second if we're at a candle open
+      // Check every second
       interval = setInterval(() => {
         const secondsToNext = getNextCandleOpen();
         setAutoTimer(secondsToNext);
         
-        // Trigger signal EXACTLY when candle opens (within 1 second tolerance)
-        if (secondsToNext <= 1) {
+        // Trigger signal 5 minutes (300 seconds) BEFORE candle opens
+        // This gives user time to prepare for entry
+        if (secondsToNext >= 299 && secondsToNext <= 301) {
           generateSignal();
         }
       }, 1000);
@@ -126,19 +127,26 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
     const newSignal = Math.random() > 0.5 ? 'CALL' : 'PUT';
     const newConfidence = Math.floor(Math.random() * (97 - 85) + 85); // 85-97% accuracy range
     
-    // Get UTC-4 times (Pocket Option timezone) - EXACT candle open
+    // Get UTC-4 times (Pocket Option timezone) - NEXT candle open (5 minutes from now)
     const now = getUTC4Time();
     const minutes = now.getMinutes();
-    const currentCandleMinute = Math.floor(minutes / 5) * 5;
     
-    // Set to exact candle open time (round down to nearest 5-min mark, 0 seconds)
+    // Get the NEXT 5-minute candle (not current)
+    const nextCandleMinute = Math.ceil(minutes / 5) * 5;
+    
+    // Set to NEXT candle open time
     const startTimeUTC4 = new Date(now);
-    startTimeUTC4.setMinutes(currentCandleMinute);
+    startTimeUTC4.setMinutes(nextCandleMinute);
     startTimeUTC4.setSeconds(0);
     startTimeUTC4.setMilliseconds(0);
     
-    const endTimeUTC4 = addMinutes(startTimeUTC4, 5); // M5 = 5 minute expiry (next candle open)
-    const allowanceEndTimeUTC4 = addMinutes(startTimeUTC4, 10); // 10 minute allowance window
+    // If we've passed the hour mark, add an hour
+    if (nextCandleMinute >= 60) {
+      startTimeUTC4.setHours(startTimeUTC4.getHours() + 1);
+      startTimeUTC4.setMinutes(nextCandleMinute - 60);
+    }
+    
+    const endTimeUTC4 = addMinutes(startTimeUTC4, 5); // M5 = 5 minute expiry (candle closes)
     
     // Generate realistic price data
     const basePrices: Record<string, number> = {
@@ -163,15 +171,17 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
     const momentums = ['STRONG', 'MODERATE', 'WEAK'];
     const momentum = momentums[Math.floor(Math.random() * momentums.length)];
     
-    // Prepare Telegram message with exact candle timing
+    // Calculate time until entry
+    const minutesUntilEntry = Math.floor((startTimeUTC4.getTime() - now.getTime()) / 60000);
+    
+    // Prepare Telegram message with preparation time
     const telegramMsg = `🚀 <b>NEW SIGNAL ALERT (${mode})</b> 🚀
 
 📊 <b>Pair:</b> ${selectedPair}
 ⚡ <b>Type:</b> ${newSignal === 'CALL' ? '🟢 BUY/CALL' : '🔴 SELL/PUT'}
-⏱ <b>Timeframe:</b> M5 (5-Minute Candle)
-🕐 <b>Candle Open (UTC-4):</b> ${format(startTimeUTC4, 'HH:mm:ss')}
-🏁 <b>Candle Close (UTC-4):</b> ${format(endTimeUTC4, 'HH:mm:ss')}
-⏳ <b>Entry Window:</b> ${format(startTimeUTC4, 'HH:mm:ss')} - ${format(endTimeUTC4, 'HH:mm:ss')} (EXACT 5-min candle)
+⏱ <b>Timeframe:</b> M5
+⏰ <b>Start Time:</b> ${format(startTimeUTC4, 'HH:mm')}
+🏁 <b>End Time:</b> ${format(endTimeUTC4, 'HH:mm')}
 
 🎯 <b>Entry:</b> ${entryPrice}
 🛑 <b>Stop Loss:</b> ${sl}
@@ -188,12 +198,12 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
 • High-probability setup identified
 • ${newSignal === 'CALL' ? 'Bullish momentum building' : 'Bearish pressure increasing'}
 • Price action confirms ${newSignal === 'CALL' ? 'upward' : 'downward'} move
-• ENTER EXACTLY AT CANDLE OPEN for best results
+• ⏰ <b>PREPARE NOW - Entry in ${minutesUntilEntry} minutes!</b>
 
 ⚠️ <b>Risk Management:</b> 
-• Entry ONLY at candle open (${format(startTimeUTC4, 'HH:mm:ss')} UTC-4)
-• Exit at candle close (${format(endTimeUTC4, 'HH:mm:ss')} UTC-4)
-• Use proper position sizing`;
+• Set your position size NOW
+• Entry at ${format(startTimeUTC4, 'HH:mm')} UTC-4
+• Exit at ${format(endTimeUTC4, 'HH:mm')} UTC-4`;
 
     console.log("📤 Sending signal to Telegram:", telegramMsg);
     
@@ -231,7 +241,7 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
            <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
              <Timer className={`w-3 h-3 ${isAutoActive ? 'animate-pulse text-primary' : ''}`} />
              {isAutoActive ? (
-                 <>NEXT M5 CANDLE: <span className="text-foreground font-bold text-neon-blue">{formatTime(autoTimer)}</span></>
+                 <>SIGNAL IN: <span className="text-foreground font-bold text-neon-blue">{formatTime(autoTimer > 300 ? autoTimer - 300 : 0)}</span></>
              ) : (
                  <span className="text-destructive font-bold">PAUSED</span>
              )}
@@ -314,10 +324,10 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
               <div className="flex flex-col items-center gap-2">
                  <div className="flex items-center justify-center gap-2 text-sm font-mono text-muted-foreground bg-black/40 px-4 py-1.5 rounded-lg border border-white/5 backdrop-blur-md">
                    <Timer className="w-4 h-4 text-primary" />
-                   <span>M5 CANDLE EXPIRES: <span className="text-white font-bold">{formatTime(expiryTime)}</span></span>
+                   <span>ENTRY COUNTDOWN: <span className="text-white font-bold">{formatTime(expiryTime)}</span></span>
                  </div>
                  <div className="text-[10px] text-muted-foreground font-mono">
-                   Exact 5-Min Candle Entry • No Mid-Candle Entries • UTC-4
+                   Signal sent 5 mins before entry • Prepare your position • UTC-4
                  </div>
                  
                  {lastSignalSent && (
