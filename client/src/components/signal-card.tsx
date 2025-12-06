@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowUp, ArrowDown, Zap, Activity, Crosshair, Timer, Radio, PauseCircle } from 'lucide-react';
+import { ArrowUp, ArrowDown, Zap, Activity, Crosshair, Timer, Radio, PauseCircle, Send, CheckCircle2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { format, addMinutes } from 'date-fns';
 
 interface SignalCardProps {
   mode: 'AUTO' | 'MANUAL';
@@ -14,9 +15,10 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
   const [signal, setSignal] = useState<'CALL' | 'PUT' | 'WAIT'>('WAIT');
   const [confidence, setConfidence] = useState(0);
   const [expiryTime, setExpiryTime] = useState(0);
-  const [autoTimer, setAutoTimer] = useState(7 * 60); // 7 minutes in seconds
+  const [autoTimer, setAutoTimer] = useState(10 * 60); // 10 minutes analysis window
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
+  const [lastSignalSent, setLastSignalSent] = useState<string | null>(null);
 
   // Auto Mode Logic
   useEffect(() => {
@@ -28,7 +30,7 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
           if (prev <= 1) {
              // Trigger auto generation
              generateSignal();
-             return 7 * 60; // Reset to 7 mins
+             return 10 * 60; // Reset to 10 mins analysis window
           }
           return prev - 1;
         });
@@ -47,6 +49,7 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
       interval = setInterval(() => setExpiryTime(t => t - 1), 1000);
     } else if (expiryTime === 0 && signal !== 'WAIT') {
       setSignal('WAIT'); // Expire signal
+      setLastSignalSent(null);
     }
     return () => clearInterval(interval);
   }, [expiryTime, signal]);
@@ -54,19 +57,55 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
   const generateSignal = async () => {
     setIsScanning(true);
     setScanProgress(0);
+    setLastSignalSent(null);
     
-    // Simulate scanning animation
-    for(let i = 0; i <= 100; i+=5) {
+    // Simulate deep scanning animation (longer for "10 min analysis" feel)
+    for(let i = 0; i <= 100; i+=2) {
       setScanProgress(i);
-      await new Promise(r => setTimeout(r, 50)); // Quick scan
+      await new Promise(r => setTimeout(r, 40)); 
     }
 
     const newSignal = Math.random() > 0.5 ? 'CALL' : 'PUT';
-    const newConfidence = Math.floor(Math.random() * (99 - 88) + 88); // High confidence only
+    const newConfidence = Math.floor(Math.random() * (99 - 78) + 78); // min 78% as per request example
     
+    // Prepare signal details
+    const startTime = new Date();
+    const endTime = addMinutes(startTime, 5);
+    const entryPrice = (Math.random() * 100 + 100).toFixed(5);
+    const sl = (Number(entryPrice) - 0.15000).toFixed(5);
+    const tp = (Number(entryPrice) + 0.30000).toFixed(5);
+    
+    // Simulate sending to Telegram (Mock)
+    const telegramMsg = `🚀 NEW SIGNAL ALERT (AUTO) 🚀
+
+📊 Pair: AUD/JPY
+⚡ Type: ${newSignal === 'CALL' ? '🟢 BUY/CALL' : '🔴 SELL/PUT'}
+⏱ Timeframe: M5
+⏰ Start Time: ${format(startTime, 'HH:mm')}
+🏁 End Time: ${format(endTime, 'HH:mm')}
+
+🎯 Entry: ${entryPrice}
+🛑 Stop Loss: ${sl}
+💰 Take Profit: ${tp}
+
+💪 Confidence: ${newConfidence}%
+
+📊 Technicals:
+• RSI: 95.1
+• Trend: NEUTRAL
+• Momentum: STRONG
+
+📈 Analysis:
+• RSI extremely overbought at 95.1 - strong reversal signal
+• MACD bullish crossover with positive histogram
+• Price above SMA20 and SMA50 - uptrend confirmed`;
+
+    console.log("Sending to Telegram:", telegramMsg);
+    setLastSignalSent(format(new Date(), 'HH:mm:ss'));
+
     setSignal(newSignal);
     setConfidence(newConfidence);
-    setExpiryTime(60); // 60s signal validity
+    setExpiryTime(300); // 5 minutes (M5)
     setIsScanning(false);
   };
 
@@ -77,7 +116,7 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
   };
 
   return (
-    <Card className="relative p-6 glass-panel border-t-2 border-t-white/10 overflow-hidden flex flex-col items-center justify-center min-h-[350px]">
+    <Card className="relative p-6 glass-panel border-t-2 border-t-white/10 overflow-hidden flex flex-col items-center justify-center min-h-[400px]">
       {/* Decorative Background Elements */}
       <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-50" />
@@ -85,13 +124,13 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
       {/* Header Status */}
       <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
         <Badge variant="outline" className={`font-mono text-[10px] border-white/10 ${mode === 'AUTO' ? 'text-primary bg-primary/10' : 'text-accent bg-accent/10'}`}>
-          {mode} MODE
+          {mode} MODE (M5)
         </Badge>
         {mode === 'AUTO' && (
            <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
              <Timer className={`w-3 h-3 ${isAutoActive ? 'animate-pulse text-primary' : ''}`} />
              {isAutoActive ? (
-                 <>NEXT SCAN: <span className="text-foreground font-bold text-neon-blue">{formatTime(autoTimer)}</span></>
+                 <>NEXT ENTRY: <span className="text-foreground font-bold text-neon-blue">{formatTime(autoTimer)}</span></>
              ) : (
                  <span className="text-destructive font-bold">PAUSED</span>
              )}
@@ -104,14 +143,15 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
         
         {isScanning ? (
            <div className="flex flex-col items-center gap-4 w-full max-w-[200px]">
-             <div className="relative w-20 h-20 flex items-center justify-center">
+             <div className="relative w-24 h-24 flex items-center justify-center">
                <div className="absolute inset-0 border-4 border-primary/20 rounded-full animate-spin-slow" />
                <div className="absolute inset-2 border-4 border-t-primary rounded-full animate-spin" />
-               <Radio className="w-8 h-8 text-primary animate-pulse" />
+               <Radio className="w-10 h-10 text-primary animate-pulse" />
              </div>
              <div className="space-y-2 text-center w-full">
-               <span className="text-sm font-bold animate-pulse text-primary text-neon-blue">SCANNING MARKETS...</span>
+               <span className="text-sm font-bold animate-pulse text-primary text-neon-blue">ANALYZING 10m WINDOW...</span>
                <Progress value={scanProgress} className="h-1 bg-secondary" indicatorClassName="bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]" />
+               <p className="text-[10px] text-muted-foreground font-mono">Calculating Entry Points...</p>
              </div>
            </div>
         ) : signal === 'WAIT' ? (
@@ -139,15 +179,15 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
                 onClick={generateSignal}
               >
                 <Zap className="w-5 h-5 mr-2" />
-                GENERATE SIGNAL
+                ANALYZE M5 ENTRY
               </Button>
             ) : (
               <div className="text-center space-y-1">
                 <h3 className="text-lg font-bold text-muted-foreground">
-                    {isAutoActive ? 'WAITING FOR SIGNAL' : 'AUTO-TRADING PAUSED'}
+                    {isAutoActive ? 'WAITING FOR ENTRY' : 'AUTO-TRADING PAUSED'}
                 </h3>
                 <p className="text-xs text-muted-foreground/60 font-mono">
-                    {isAutoActive ? 'AI ANALYZING PRICE ACTION...' : 'RESUME TO START SCANNING'}
+                    {isAutoActive ? 'AI SCANNING 10m PRICE ACTION...' : 'RESUME TO START SCANNING'}
                 </p>
               </div>
             )}
@@ -162,7 +202,7 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
                 <ArrowDown className="w-24 h-24 text-destructive drop-shadow-[0_0_20px_rgba(var(--destructive),0.8)] animate-bounce" />
               )}
               <div className="absolute -bottom-4 bg-background px-4 py-1 rounded-full border border-white/10 text-xs font-black tracking-widest uppercase shadow-lg">
-                M1 Expiry
+                M5 Expiry
               </div>
             </div>
 
@@ -170,15 +210,24 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
               <h1 className={`text-7xl font-black tracking-tighter ${signal === 'CALL' ? 'text-primary text-neon-blue' : 'text-destructive text-neon-pink'}`}>
                 {signal}
               </h1>
-              <div className="flex items-center justify-center gap-2 text-sm font-mono text-muted-foreground bg-black/40 px-4 py-1.5 rounded-lg border border-white/5 backdrop-blur-md">
-                <Timer className="w-4 h-4 text-primary" />
-                <span>EXPIRES IN <span className="text-white font-bold">{expiryTime}s</span></span>
+              <div className="flex flex-col items-center gap-2">
+                 <div className="flex items-center justify-center gap-2 text-sm font-mono text-muted-foreground bg-black/40 px-4 py-1.5 rounded-lg border border-white/5 backdrop-blur-md">
+                   <Timer className="w-4 h-4 text-primary" />
+                   <span>CLOSE IN <span className="text-white font-bold">{formatTime(expiryTime)}</span></span>
+                 </div>
+                 
+                 {lastSignalSent && (
+                     <div className="flex items-center gap-2 text-[10px] text-muted-foreground animate-in fade-in slide-in-from-bottom-2">
+                        <CheckCircle2 className="w-3 h-3 text-green-500" />
+                        <span>Signal sent to Telegram at {lastSignalSent}</span>
+                     </div>
+                 )}
               </div>
             </div>
 
             <div className="w-full space-y-3 px-4">
               <div className="flex justify-between text-xs font-mono font-bold">
-                <span className="text-muted-foreground">PROBABILITY SCORE</span>
+                <span className="text-muted-foreground">CONFIDENCE SCORE</span>
                 <span className={signal === 'CALL' ? 'text-primary' : 'text-destructive'}>{confidence}%</span>
               </div>
               <Progress value={confidence} className="h-4 bg-secondary" indicatorClassName={signal === 'CALL' ? 'bg-primary shadow-[0_0_15px_rgba(var(--primary),0.6)]' : 'bg-destructive shadow-[0_0_15px_rgba(var(--destructive),0.6)]'} />

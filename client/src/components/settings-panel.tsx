@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useState, useEffect } from 'react';
-import { ShieldCheck, Key, Clock, AlertTriangle, X } from 'lucide-react';
+import { ShieldCheck, Key, Clock, AlertTriangle, X, Send } from 'lucide-react';
 import { addDays, format } from 'date-fns';
 import { createPortal } from 'react-dom';
 
@@ -16,6 +16,8 @@ interface SettingsPanelProps {
 
 export function SettingsPanel({ open, onOpenChange, onSaveSsid, currentSsid }: SettingsPanelProps) {
   const [ssid, setSsid] = useState(currentSsid);
+  const [telegramToken, setTelegramToken] = useState('');
+  const [channelId, setChannelId] = useState('');
   const [expiration, setExpiration] = useState<Date | null>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -25,10 +27,21 @@ export function SettingsPanel({ open, onOpenChange, onSaveSsid, currentSsid }: S
       setExpiration(addDays(new Date(), 30));
     }
     setSsid(currentSsid);
+    
+    // Load saved telegram settings
+    const savedToken = localStorage.getItem('telegram_bot_token');
+    const savedChannel = localStorage.getItem('telegram_channel_id');
+    if (savedToken) setTelegramToken(savedToken);
+    if (savedChannel) setChannelId(savedChannel);
   }, [currentSsid]);
 
   const handleSave = () => {
     onSaveSsid(ssid);
+    
+    // Save telegram settings
+    if (telegramToken) localStorage.setItem('telegram_bot_token', telegramToken);
+    if (channelId) localStorage.setItem('telegram_channel_id', channelId);
+    
     setExpiration(addDays(new Date(), 30));
     onOpenChange(false);
   };
@@ -53,11 +66,12 @@ export function SettingsPanel({ open, onOpenChange, onSaveSsid, currentSsid }: S
               System Configuration
             </h2>
             <p className="text-sm text-muted-foreground">
-              Configure your Pocket Option connection settings.
+              Configure your connection settings.
             </p>
           </div>
           
           <div className="space-y-6">
+            {/* Pocket Option Settings */}
             <div className="space-y-2">
               <Label htmlFor="ssid" className="text-xs font-mono uppercase text-muted-foreground flex items-center gap-2">
                 <Key className="w-3 h-3" /> 
@@ -73,9 +87,29 @@ export function SettingsPanel({ open, onOpenChange, onSaveSsid, currentSsid }: S
                 />
                 <ShieldCheck className="absolute right-3 top-3 w-4 h-4 text-green-500 opacity-50" />
               </div>
-              <p className="text-[10px] text-muted-foreground">
-                Use <code className="bg-secondary/50 px-1 py-0.5 rounded text-primary">ArmnzVp0xR-_NrLWs</code> for demo access.
-              </p>
+            </div>
+
+            {/* Telegram Settings */}
+            <div className="space-y-3 pt-2 border-t border-white/5">
+              <Label className="text-xs font-mono uppercase text-muted-foreground flex items-center gap-2">
+                <Send className="w-3 h-3" /> 
+                Telegram Integration
+              </Label>
+              
+              <div className="space-y-2">
+                <Input 
+                  placeholder="Bot Token (e.g., 12345:ABC-DEF...)" 
+                  className="font-mono text-xs bg-secondary/50 border-white/10 h-9 text-foreground"
+                  value={telegramToken}
+                  onChange={(e) => setTelegramToken(e.target.value)}
+                />
+                <Input 
+                  placeholder="Channel ID (e.g., -100123456789)" 
+                  className="font-mono text-xs bg-secondary/50 border-white/10 h-9 text-foreground"
+                  value={channelId}
+                  onChange={(e) => setChannelId(e.target.value)}
+                />
+              </div>
             </div>
 
             {expiration && ssid && (
