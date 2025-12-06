@@ -1,14 +1,14 @@
 
-import { useState, useEffect } from 'react';
+import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Wifi, WifiOff } from 'lucide-react';
 
 export function ConnectionModal() {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [showModal, setShowModal] = useState(!navigator.onLine);
+  const [isOnline, setIsOnline] = React.useState(navigator.onLine);
+  const [showModal, setShowModal] = React.useState(!navigator.onLine);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
       setTimeout(() => setShowModal(false), 2000);
