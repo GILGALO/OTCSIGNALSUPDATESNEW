@@ -1,223 +1,124 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowUp, ArrowDown, Zap, Activity, Crosshair, Timer, Radio, PauseCircle, Send, CheckCircle2 } from 'lucide-react';
+import { ArrowUp, ArrowDown, Zap, Crosshair, Timer, Radio, PauseCircle, CheckCircle2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { format, addMinutes } from 'date-fns';
-import { toZonedTime } from 'date-fns-tz';
 
 interface SignalCardProps {
   mode: 'AUTO' | 'MANUAL';
   isAutoActive?: boolean;
+  selectedAsset?: string;
 }
 
-export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
+interface GeneratedSignal {
+  id: string;
+  type: 'CALL' | 'PUT';
+  confidence: number;
+  entryPrice: number;
+  stopLoss: number;
+  takeProfit: number;
+  entryTime: string;
+  expiryTime: string;
+  technicals: any;
+}
+
+export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD' }: SignalCardProps) {
   const [signal, setSignal] = useState<'CALL' | 'PUT' | 'WAIT'>('WAIT');
   const [confidence, setConfidence] = useState(0);
   const [expiryTime, setExpiryTime] = useState(0);
-  const [autoTimer, setAutoTimer] = useState(10 * 60); // 10 minutes analysis window
+  const [autoTimer, setAutoTimer] = useState(10 * 60);
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [lastSignalSent, setLastSignalSent] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Helper to get UTC-4 time
-  const getUTC4Time = () => {
-    const now = new Date();
-    // Get UTC time first
-    const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
-    // Subtract 4 hours (UTC-4)
-    return new Date(utcTime - (4 * 60 * 60 * 1000));
-  };
-
-  // Get next M5 candle open time
-  const getNextCandleOpen = () => {
-    const now = getUTC4Time();
-    const minutes = now.getMinutes();
-    const seconds = now.getSeconds();
-    
-    // Calculate minutes until next 5-minute mark (0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55)
-    const nextCandleMinute = Math.ceil(minutes / 5) * 5;
-    const minutesUntilNext = nextCandleMinute - minutes;
-    const secondsUntilNext = (minutesUntilNext * 60) - seconds;
-    
-    return secondsUntilNext;
-  };
-
-  // Auto Mode Logic - Send signal 5 minutes BEFORE candle opens
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
     if (mode === 'AUTO' && isAutoActive) {
-      // Check every second
       interval = setInterval(() => {
-        const secondsToNext = getNextCandleOpen();
-        setAutoTimer(secondsToNext);
-        
-        // Trigger signal 5 minutes (300 seconds) BEFORE candle opens
-        // This gives user time to prepare for entry
-        if (secondsToNext >= 299 && secondsToNext <= 301) {
-          generateSignal();
-        }
+        setAutoTimer((prev) => {
+          if (prev <= 1) {
+            generateSignal();
+            return 10 * 60;
+          }
+          return prev - 1;
+        });
       }, 1000);
     }
 
     return () => clearInterval(interval);
-  }, [mode, isAutoActive]);
+  }, [mode, isAutoActive, selectedAsset]);
 
-  // Signal Expiry Countdown
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (expiryTime > 0) {
       interval = setInterval(() => setExpiryTime(t => t - 1), 1000);
     } else if (expiryTime === 0 && signal !== 'WAIT') {
-      setSignal('WAIT'); // Expire signal
+      setSignal('WAIT');
       setLastSignalSent(null);
     }
     return () => clearInterval(interval);
   }, [expiryTime, signal]);
 
-  const sendToTelegram = async (message: string) => {
-    const botToken = localStorage.getItem('telegram_bot_token');
-    const channelId = localStorage.getItem('telegram_channel_id');
-    
-    if (!botToken || !channelId) {
-      console.log("Telegram credentials not configured. Message:", message);
-      return false;
-    }
-
-    try {
-      const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chat_id: channelId,
-          text: message,
-          parse_mode: 'HTML'
-        })
-      });
-
-      if (response.ok) {
-        console.log("✅ Signal sent to Telegram successfully");
-        return true;
-      } else {
-        console.error("❌ Failed to send to Telegram:", await response.text());
-        return false;
-      }
-    } catch (error) {
-      console.error("❌ Telegram send error:", error);
-      return false;
-    }
-  };
-
   const generateSignal = async () => {
     setIsScanning(true);
     setScanProgress(0);
+    setError(null);
     setLastSignalSent(null);
     
-    // Simulate deep scanning animation (longer for "10 min analysis" feel)
     for(let i = 0; i <= 100; i+=2) {
       setScanProgress(i);
-      await new Promise(r => setTimeout(r, 40)); 
+      await new Promise(r => setTimeout(r, 40));
     }
 
-    // Enhanced signal generation with higher accuracy (85-97% range for quality signals)
-    const newSignal = Math.random() > 0.5 ? 'CALL' : 'PUT';
-    const newConfidence = Math.floor(Math.random() * (97 - 85) + 85); // 85-97% accuracy range
-    
-    // Get UTC-4 times (Pocket Option timezone) - NEXT candle open (5 minutes from now)
-    const now = getUTC4Time();
-    const minutes = now.getMinutes();
-    
-    // Get the NEXT 5-minute candle (not current)
-    const nextCandleMinute = Math.ceil(minutes / 5) * 5;
-    
-    // Set to NEXT candle open time
-    const startTimeUTC4 = new Date(now);
-    startTimeUTC4.setMinutes(nextCandleMinute);
-    startTimeUTC4.setSeconds(0);
-    startTimeUTC4.setMilliseconds(0);
-    
-    // If we've passed the hour mark, add an hour
-    if (nextCandleMinute >= 60) {
-      startTimeUTC4.setHours(startTimeUTC4.getHours() + 1);
-      startTimeUTC4.setMinutes(nextCandleMinute - 60);
+    try {
+      const ssid = localStorage.getItem('pocket_option_ssid');
+      if (!ssid) {
+        setError('SSID not configured');
+        setIsScanning(false);
+        return;
+      }
+
+      const telegramToken = localStorage.getItem('telegram_bot_token');
+      const channelId = localStorage.getItem('telegram_channel_id');
+
+      const response = await fetch('/api/generate-signal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol: selectedAsset,
+          ssid,
+          telegramToken: telegramToken || undefined,
+          channelId: channelId || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Failed to generate signal');
+        setIsScanning(false);
+        return;
+      }
+
+      if (data.signal && data.signal.type !== 'WAIT') {
+        setSignal(data.signal.type);
+        setConfidence(data.signal.confidence);
+        setExpiryTime(300);
+        if (data.telegram?.success) {
+          setLastSignalSent(format(new Date(), 'HH:mm:ss'));
+        }
+      } else {
+        setError('No strong signal detected');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error generating signal');
+    } finally {
+      setIsScanning(false);
     }
-    
-    const endTimeUTC4 = addMinutes(startTimeUTC4, 5); // M5 = 5 minute expiry (candle closes)
-    
-    // Generate realistic price data
-    const basePrices: Record<string, number> = {
-      'EUR/USD': 1.0850,
-      'GBP/USD': 1.2630,
-      'USD/JPY': 151.20,
-      'AUD/JPY': 98.45,
-      'EUR/JPY': 163.82
-    };
-    
-    const pairs = Object.keys(basePrices);
-    const selectedPair = pairs[Math.floor(Math.random() * pairs.length)];
-    const basePrice = basePrices[selectedPair];
-    const entryPrice = (basePrice + (Math.random() - 0.5) * 0.01).toFixed(5);
-    const sl = (Number(entryPrice) - 0.15000).toFixed(5);
-    const tp = (Number(entryPrice) + 0.30000).toFixed(5);
-    
-    // Generate technical indicators
-    const rsi = (Math.random() * 40 + 30).toFixed(1); // 30-70 range (normal)
-    const trends = ['BULLISH', 'BEARISH', 'NEUTRAL'];
-    const trend = trends[Math.floor(Math.random() * trends.length)];
-    const momentums = ['STRONG', 'MODERATE', 'WEAK'];
-    const momentum = momentums[Math.floor(Math.random() * momentums.length)];
-    
-    // Calculate time until entry
-    const minutesUntilEntry = Math.floor((startTimeUTC4.getTime() - now.getTime()) / 60000);
-    
-    // Prepare Telegram message with preparation time
-    const telegramMsg = `🚀 <b>NEW SIGNAL ALERT (${mode})</b> 🚀
-
-📊 <b>Pair:</b> ${selectedPair}
-⚡ <b>Type:</b> ${newSignal === 'CALL' ? '🟢 BUY/CALL' : '🔴 SELL/PUT'}
-⏱ <b>Timeframe:</b> M5
-⏰ <b>Start Time:</b> ${format(startTimeUTC4, 'HH:mm')}
-🏁 <b>End Time:</b> ${format(endTimeUTC4, 'HH:mm')}
-
-🎯 <b>Entry:</b> ${entryPrice}
-🛑 <b>Stop Loss:</b> ${sl}
-💰 <b>Take Profit:</b> ${tp}
-
-💪 <b>Confidence:</b> ${newConfidence}%
-
-📊 <b>Technicals:</b>
-• RSI: ${rsi}
-• Trend: ${trend}
-• Momentum: ${momentum}
-
-📈 <b>Analysis:</b>
-• High-probability setup identified
-• ${newSignal === 'CALL' ? 'Bullish momentum building' : 'Bearish pressure increasing'}
-• Price action confirms ${newSignal === 'CALL' ? 'upward' : 'downward'} move
-• ⏰ <b>PREPARE NOW - Entry in ${minutesUntilEntry} minutes!</b>
-
-⚠️ <b>Risk Management:</b> 
-• Set your position size NOW
-• Entry at ${format(startTimeUTC4, 'HH:mm')} UTC-4
-• Exit at ${format(endTimeUTC4, 'HH:mm')} UTC-4`;
-
-    console.log("📤 Sending signal to Telegram:", telegramMsg);
-    
-    // Actually send to Telegram
-    const sent = await sendToTelegram(telegramMsg);
-    
-    if (sent) {
-      setLastSignalSent(format(getUTC4Time(), 'HH:mm:ss'));
-    }
-
-    setSignal(newSignal);
-    setConfidence(newConfidence);
-    setExpiryTime(300); // 5 minutes (300 seconds) - exact M5 candle duration
-    setIsScanning(false);
   };
 
   const formatTime = (seconds: number) => {
@@ -228,11 +129,9 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
 
   return (
     <Card className="relative p-6 glass-panel border-t-2 border-t-white/10 overflow-hidden flex flex-col items-center justify-center min-h-[400px]">
-      {/* Decorative Background Elements */}
       <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-50" />
       
-      {/* Header Status */}
       <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
         <Badge variant="outline" className={`font-mono text-[10px] border-white/10 ${mode === 'AUTO' ? 'text-primary bg-primary/10' : 'text-accent bg-accent/10'}`}>
           {mode} MODE (M5)
@@ -241,7 +140,7 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
            <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
              <Timer className={`w-3 h-3 ${isAutoActive ? 'animate-pulse text-primary' : ''}`} />
              {isAutoActive ? (
-                 <>SIGNAL IN: <span className="text-foreground font-bold text-neon-blue">{formatTime(autoTimer > 300 ? autoTimer - 300 : 0)}</span></>
+                 <>NEXT: <span className="text-foreground font-bold text-neon-blue">{formatTime(autoTimer)}</span></>
              ) : (
                  <span className="text-destructive font-bold">PAUSED</span>
              )}
@@ -249,7 +148,6 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
         )}
       </div>
 
-      {/* Content */}
       <div className="mt-8 w-full flex flex-col items-center">
         
         {isScanning ? (
@@ -260,9 +158,8 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
                <Radio className="w-10 h-10 text-primary animate-pulse" />
              </div>
              <div className="space-y-2 text-center w-full">
-               <span className="text-sm font-bold animate-pulse text-primary text-neon-blue">WAITING FOR M5 CANDLE OPEN...</span>
+               <span className="text-sm font-bold animate-pulse text-primary text-neon-blue">ANALYZING {selectedAsset}...</span>
                <Progress value={scanProgress} className="h-1 bg-secondary" indicatorClassName="bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]" />
-               <p className="text-[10px] text-muted-foreground font-mono">Calculating Entry Points...</p>
              </div>
            </div>
         ) : signal === 'WAIT' ? (
@@ -283,6 +180,12 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
               )}
             </div>
             
+            {error && (
+              <div className="text-center text-destructive text-sm">
+                <p className="font-bold">{error}</p>
+              </div>
+            )}
+            
             {mode === 'MANUAL' ? (
               <Button 
                 size="lg" 
@@ -290,15 +193,15 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
                 onClick={generateSignal}
               >
                 <Zap className="w-5 h-5 mr-2" />
-                ANALYZE M5 ENTRY
+                GENERATE SIGNAL
               </Button>
             ) : (
               <div className="text-center space-y-1">
                 <h3 className="text-lg font-bold text-muted-foreground">
-                    {isAutoActive ? 'WAITING FOR ENTRY' : 'AUTO-TRADING PAUSED'}
+                    {isAutoActive ? 'WAITING FOR SIGNAL' : 'AUTO-TRADING PAUSED'}
                 </h3>
                 <p className="text-xs text-muted-foreground/60 font-mono">
-                    {isAutoActive ? 'AI SCANNING 10m PRICE ACTION...' : 'RESUME TO START SCANNING'}
+                    {isAutoActive ? 'AI ANALYZING PRICE ACTION...' : 'RESUME TO START SCANNING'}
                 </p>
               </div>
             )}
@@ -324,16 +227,13 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
               <div className="flex flex-col items-center gap-2">
                  <div className="flex items-center justify-center gap-2 text-sm font-mono text-muted-foreground bg-black/40 px-4 py-1.5 rounded-lg border border-white/5 backdrop-blur-md">
                    <Timer className="w-4 h-4 text-primary" />
-                   <span>ENTRY COUNTDOWN: <span className="text-white font-bold">{formatTime(expiryTime)}</span></span>
-                 </div>
-                 <div className="text-[10px] text-muted-foreground font-mono">
-                   Signal sent 5 mins before entry • Prepare your position • UTC-4
+                   <span>EXPIRES IN <span className="text-white font-bold">{formatTime(expiryTime)}</span></span>
                  </div>
                  
                  {lastSignalSent && (
                      <div className="flex items-center gap-2 text-[10px] text-green-500 animate-in fade-in slide-in-from-bottom-2">
                         <CheckCircle2 className="w-3 h-3" />
-                        <span>✅ Sent to Telegram at {lastSignalSent} UTC-4</span>
+                        <span>✅ Sent to Telegram at {lastSignalSent}</span>
                      </div>
                  )}
               </div>
@@ -341,13 +241,10 @@ export function SignalCard({ mode, isAutoActive = true }: SignalCardProps) {
 
             <div className="w-full space-y-3 px-4">
               <div className="flex justify-between text-xs font-mono font-bold">
-                <span className="text-muted-foreground">ACCURACY SCORE (AI-VERIFIED)</span>
+                <span className="text-muted-foreground">CONFIDENCE SCORE</span>
                 <span className={signal === 'CALL' ? 'text-primary' : 'text-destructive'}>{confidence}%</span>
               </div>
               <Progress value={confidence} className="h-4 bg-secondary" indicatorClassName={signal === 'CALL' ? 'bg-primary shadow-[0_0_15px_rgba(var(--primary),0.6)]' : 'bg-destructive shadow-[0_0_15px_rgba(var(--destructive),0.6)]'} />
-              <p className="text-[9px] text-center text-muted-foreground">
-                Signals analyzed across 10+ technical indicators
-              </p>
             </div>
           </div>
         )}

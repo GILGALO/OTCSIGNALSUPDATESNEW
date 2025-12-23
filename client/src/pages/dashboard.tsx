@@ -10,35 +10,16 @@ import { StatsPanel } from '@/components/stats-panel';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Bell, Settings, User, Zap, Timer, Shield, Activity, Clock } from 'lucide-react';
+import { Bell, Settings, User, Zap, Timer, Shield, Activity } from 'lucide-react';
 import bgImage from '@assets/generated_images/deep_cyber_blue_and_purple_futuristic_data_background.png';
-import { format } from 'date-fns';
 
 export default function Dashboard() {
   const [selectedAsset, setSelectedAsset] = useState('EUR/USD');
   const [ssid, setSsid] = useState('');
   const [mode, setMode] = useState<'AUTO' | 'MANUAL'>('AUTO');
-  const [isAutoActive, setIsAutoActive] = useState(true); // Toggle for auto mode
+  const [isAutoActive, setIsAutoActive] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
-  const [currentTimeUTC4, setCurrentTimeUTC4] = useState('');
 
-  // Update UTC-4 time every second
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      // Get UTC time first
-      const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
-      // Subtract 4 hours (UTC-4)
-      const utc4Time = new Date(utcTime - (4 * 60 * 60 * 1000));
-      setCurrentTimeUTC4(format(utc4Time, 'HH:mm:ss'));
-    };
-    
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Load SSID from storage on mount
   useEffect(() => {
     const savedSsid = localStorage.getItem('pocket_option_ssid');
     if (savedSsid) {
@@ -46,17 +27,14 @@ export default function Dashboard() {
     }
   }, []);
 
-  // Update SSID when changed in settings
   const handleSsidChange = (newSsid: string) => {
       setSsid(newSsid);
       localStorage.setItem('pocket_option_ssid', newSsid);
-      // Reset expiry if saving manually from settings
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + 30);
       localStorage.setItem('pocket_option_ssid_expiry', expiryDate.toISOString());
   };
 
-  // Apply background image to body
   useEffect(() => {
     document.body.style.backgroundImage = `url(${bgImage})`;
     document.body.style.backgroundSize = 'cover';
@@ -78,7 +56,6 @@ export default function Dashboard() {
         onSaveSsid={handleSsidChange}
       />
       
-      {/* Header */}
       <header className="h-16 border-b border-white/5 flex items-center justify-between px-6 bg-[#0a0a0a]/70 backdrop-blur-xl sticky top-0 z-40 shadow-2xl">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center font-black text-background text-xl shadow-[0_0_20px_rgba(var(--primary),0.5)] glow-box-primary">P</div>
@@ -90,7 +67,6 @@ export default function Dashboard() {
           </div>
         </div>
         
-        {/* Mode Switcher */}
         <div className="hidden md:flex items-center gap-6 bg-secondary/30 p-2 rounded-xl border border-white/5 backdrop-blur-md">
            
            <div className="flex items-center gap-2">
@@ -125,12 +101,6 @@ export default function Dashboard() {
 
         <div className="flex items-center gap-4">
           <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 border border-white/10">
-            <Clock className="w-3 h-3 text-primary" />
-            <span className="text-[10px] font-mono text-primary font-bold">{currentTimeUTC4}</span>
-            <span className="text-[9px] text-muted-foreground">UTC-4</span>
-          </div>
-          
-          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 border border-white/10">
             <Shield className="w-3 h-3 text-primary" />
             <span className="text-[10px] font-mono text-muted-foreground">SSID: <span className="text-primary">{ssid ? `...${ssid.slice(-4)}` : 'N/A'}</span></span>
           </div>
@@ -147,29 +117,24 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-[1600px] mx-auto w-full z-10">
         
-        {/* Left Sidebar - Asset List */}
         <div className="lg:col-span-3 h-full flex flex-col gap-4">
           <div className="flex-1 min-h-[400px]">
              <AssetList onSelect={setSelectedAsset} selected={selectedAsset} />
           </div>
         </div>
 
-        {/* Center - Chart & Stats */}
         <div className="lg:col-span-6 space-y-6">
           <StatsPanel />
           
-          {/* Chart Section */}
           <TradingChart symbol={selectedAsset} />
           
           <RecentSignals />
         </div>
 
-        {/* Right Sidebar - Signal & Analysis */}
         <div className="lg:col-span-3 space-y-6 flex flex-col">
-          <SignalCard mode={mode} isAutoActive={isAutoActive} />
+          <SignalCard mode={mode} isAutoActive={isAutoActive} selectedAsset={selectedAsset} />
           <div className="flex-1">
             <MarketAnalysis />
           </div>
