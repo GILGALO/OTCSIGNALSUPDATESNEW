@@ -1,23 +1,24 @@
 import os
 import time
 from threading import Thread
-from flask import Flask
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # ---- BOT IMPORT ----
-# Adjust ONLY if ImportError happens
 from server import start_bot
 
 
-app = Flask(__name__)
-
-@app.route("/")
-def home():
-    return "OTC Signal Bot is running"
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/plain")
+        self.end_headers()
+        self.wfile.write(b"OTC Signal Bot is running")
 
 
 def run_web():
     port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    server.serve_forever()
 
 
 if __name__ == "__main__":
