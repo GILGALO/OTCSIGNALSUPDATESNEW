@@ -3,7 +3,6 @@ import time
 from threading import Thread
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-# ---- BOT IMPORT ----
 from server import start_bot
 
 
