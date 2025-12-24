@@ -74,12 +74,28 @@ export async function registerRoutes(
         }
       }
 
-      // Fetch ONLY 26 candles needed for technical analysis (optimize token usage)
+      // Fetch REAL market data - 26+ candles required
       const client = createPocketOptionClient(ssid);
-      const candles = await client.getM5Candles(symbol, 26);
+      let candles;
+      
+      try {
+        candles = await client.getM5Candles(symbol, 26);
+      } catch (dataError) {
+        const errorMsg = dataError instanceof Error ? dataError.message : String(dataError);
+        console.error(`🚨 REAL DATA FETCH FAILED: ${errorMsg}`);
+        return res.status(400).json({ 
+          error: "Real market data unavailable",
+          details: errorMsg,
+          message: "Unable to fetch real market data. Please verify your SSID is valid and Pocket Option is accessible."
+        });
+      }
 
       if (candles.length < 26) {
-        return res.status(400).json({ error: "Insufficient candle data" });
+        return res.status(400).json({ 
+          error: "Insufficient real market data",
+          details: `Only ${candles.length} candles available (need 26+)`,
+          message: "Not enough historical data to generate signal. Try again in a few moments."
+        });
       }
 
       // Store last 5 candles for database record (minimal storage)
