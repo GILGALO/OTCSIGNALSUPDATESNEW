@@ -12,6 +12,7 @@ import { scheduleSignalSend, getSignalSendTime, calculateM5CandleEntryTime } fro
 const generateSignalSchema = z.object({
   symbol: z.string().min(1),
   ssid: z.string().min(1),
+  source: z.enum(["AUTO", "MANUAL"]).default("AUTO"),
   telegramToken: z.string().optional(),
   channelId: z.string().optional(),
 });
@@ -51,7 +52,7 @@ export async function registerRoutes(
   // Generate trading signal
   app.post("/api/generate-signal", async (req, res) => {
     try {
-      const { symbol, ssid, telegramToken, channelId } = generateSignalSchema.parse(req.body);
+      const { symbol, ssid, source, telegramToken, channelId } = generateSignalSchema.parse(req.body);
 
       // Fetch M5 candles (last 50 for analysis, 2 sets: last 10 = 50 min window, another 50 before that for extended analysis)
       const client = createPocketOptionClient(ssid);
@@ -125,6 +126,7 @@ export async function registerRoutes(
       const signal = await storage.createSignal({
         symbol,
         signalType: type,
+        source,
         confidence,
         entryPrice: entryPrice.toString(),
         stopLoss: stopLoss.toString(),
@@ -200,6 +202,7 @@ export async function registerRoutes(
         signal: {
           id: signal.id,
           type,
+          source,
           confidence,
           entryPrice,
           stopLoss,
@@ -230,6 +233,7 @@ export async function registerRoutes(
           id: s.id,
           symbol: s.symbol,
           type: s.signalType,
+          source: s.source,
           confidence: s.confidence,
           entryPrice: parseFloat(s.entryPrice),
           stopLoss: parseFloat(s.stopLoss),

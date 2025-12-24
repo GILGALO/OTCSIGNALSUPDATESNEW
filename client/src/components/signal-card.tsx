@@ -92,6 +92,7 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
         body: JSON.stringify({
           symbol: selectedAsset,
           ssid,
+          source: mode,
           telegramToken: telegramToken || undefined,
           channelId: channelId || undefined,
         }),

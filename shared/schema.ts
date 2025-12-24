@@ -30,6 +30,7 @@ export const signals = pgTable("signals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   symbol: varchar("symbol").notNull(),
   signalType: varchar("signal_type").notNull(), // CALL or PUT
+  source: varchar("source").notNull().default("AUTO"), // AUTO or MANUAL
   confidence: integer("confidence").notNull(), // 0-100
   entryPrice: numeric("entry_price", { precision: 20, scale: 8 }).notNull(),
   stopLoss: numeric("stop_loss", { precision: 20, scale: 8 }).notNull(),

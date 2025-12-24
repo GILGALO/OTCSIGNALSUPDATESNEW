@@ -1,21 +1,45 @@
+import { useEffect, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
 
-const HISTORY = [
-  { time: '14:32:05', pair: 'EUR/USD', type: 'CALL', price: 1.0845, result: 'WIN', profit: '+$184' },
-  { time: '14:30:12', pair: 'GBP/USD', type: 'PUT', price: 1.2630, result: 'WIN', profit: '+$176' },
-  { time: '14:28:45', pair: 'USD/JPY', type: 'CALL', price: 151.20, result: 'LOSS', profit: '-$200' },
-  { time: '14:25:30', pair: 'EUR/USD', type: 'PUT', price: 1.0855, result: 'WIN', profit: '+$184' },
-  { time: '14:22:15', pair: 'AUD/CAD', type: 'CALL', price: 0.8940, result: 'WIN', profit: '+$164' },
-];
+interface Signal {
+  id: string;
+  symbol: string;
+  type: 'CALL' | 'PUT';
+  source: 'AUTO' | 'MANUAL';
+  entryPrice: number;
+  createdAt: string;
+}
 
-export function RecentSignals() {
+export function RecentSignals({ selectedAsset = 'EUR/USD' }: { selectedAsset?: string }) {
+  const [signals, setSignals] = useState<Signal[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSignals = async () => {
+      try {
+        const response = await fetch(`/api/signals/${selectedAsset}?limit=5`);
+        if (response.ok) {
+          const data = await response.json();
+          setSignals(data.signals);
+        }
+      } catch (err) {
+        console.error('Failed to fetch signals:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSignals();
+  }, [selectedAsset]);
+
   return (
     <Card className="glass-panel overflow-hidden">
       <div className="p-4 border-b border-white/10 flex items-center justify-between">
         <h3 className="font-bold text-lg">Signal History</h3>
-        <Badge variant="outline" className="text-xs font-mono">LAST 5 TRADES</Badge>
+        <Badge variant="outline" className="text-xs font-mono">LAST 5 SIGNALS</Badge>
       </div>
       <Table>
         <TableHeader className="bg-white/5">
@@ -23,28 +47,44 @@ export function RecentSignals() {
             <TableHead className="text-xs uppercase">Time</TableHead>
             <TableHead className="text-xs uppercase">Pair</TableHead>
             <TableHead className="text-xs uppercase">Type</TableHead>
+            <TableHead className="text-xs uppercase">Source</TableHead>
             <TableHead className="text-xs uppercase">Price</TableHead>
-            <TableHead className="text-xs uppercase text-right">Result</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {HISTORY.map((trade, i) => (
-            <TableRow key={i} className="border-white/5 hover:bg-white/5 transition-colors">
-              <TableCell className="font-mono text-xs text-muted-foreground">{trade.time}</TableCell>
-              <TableCell className="font-bold text-xs">{trade.pair}</TableCell>
-              <TableCell>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded ${trade.type === 'CALL' ? 'bg-primary/20 text-primary' : 'bg-destructive/20 text-destructive'}`}>
-                  {trade.type}
-                </span>
-              </TableCell>
-              <TableCell className="font-mono text-xs">{trade.price.toFixed(4)}</TableCell>
-              <TableCell className="text-right">
-                <span className={`text-xs font-bold ${trade.result === 'WIN' ? 'text-primary' : 'text-destructive'}`}>
-                  {trade.profit}
-                </span>
+          {loading ? (
+            <TableRow className="border-white/5">
+              <TableCell colSpan={5} className="text-center text-xs text-muted-foreground py-4">
+                Loading signals...
               </TableCell>
             </TableRow>
-          ))}
+          ) : signals.length === 0 ? (
+            <TableRow className="border-white/5">
+              <TableCell colSpan={5} className="text-center text-xs text-muted-foreground py-4">
+                No signals yet
+              </TableCell>
+            </TableRow>
+          ) : (
+            signals.map((signal) => (
+              <TableRow key={signal.id} className="border-white/5 hover:bg-white/5 transition-colors">
+                <TableCell className="font-mono text-xs text-muted-foreground">
+                  {format(new Date(signal.createdAt), 'HH:mm:ss')}
+                </TableCell>
+                <TableCell className="font-bold text-xs">{signal.symbol}</TableCell>
+                <TableCell>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded ${signal.type === 'CALL' ? 'bg-primary/20 text-primary' : 'bg-destructive/20 text-destructive'}`}>
+                    {signal.type}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className={`text-[10px] font-mono ${signal.source === 'AUTO' ? 'bg-primary/10 text-primary border-primary/20' : 'bg-accent/10 text-accent border-accent/20'}`}>
+                    {signal.source}
+                  </Badge>
+                </TableCell>
+                <TableCell className="font-mono text-xs">{signal.entryPrice.toFixed(5)}</TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
     </Card>
