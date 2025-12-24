@@ -24,11 +24,9 @@ interface GeneratedSignal {
   technicals: any;
 }
 
+// Top liquid pairs only - fastest scans, most signals
 const ASSETS_FOR_AUTO_SCAN = [
-  'EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/CAD', 'EUR/JPY',
-  'USD/CHF', 'NZD/USD', 'EUR/GBP', 'GBP/JPY', 'CAD/JPY',
-  'AUD/USD', 'CAD/USD', 'NZD/JPY', 'USD/CAD', 'GBP/CHF',
-  'EUR/CAD', 'AUD/JPY', 'EUR/AUD', 'GBP/CAD', 'AUD/CHF',
+  'EUR/USD', 'GBP/USD', 'USD/JPY', 'EUR/JPY', 'AUD/USD',
 ];
 
 export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD' }: SignalCardProps) {
@@ -94,43 +92,59 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
       const channelId = localStorage.getItem('telegram_channel_id');
 
       // Scan each asset for a strong signal
+      let validScans = 0;
       for (let idx = 0; idx < assetsToScan.length; idx++) {
         const asset = assetsToScan[idx];
         const progressPercent = Math.floor((idx / assetsToScan.length) * 100);
         setScanProgress(progressPercent);
 
-        const response = await fetch('/api/generate-signal', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            symbol: asset,
-            ssid,
-            source: mode,
-            telegramToken: telegramToken || undefined,
-            channelId: channelId || undefined,
-          }),
-        });
+        try {
+          const response = await fetch('/api/generate-signal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              symbol: asset,
+              ssid,
+              source: mode,
+              telegramToken: telegramToken || undefined,
+              channelId: channelId || undefined,
+            }),
+          });
 
-        const data = await response.json();
-
-        // Check if we found a strong signal
-        if (data.signal && data.signal.type !== 'WAIT') {
-          setSignal(data.signal.type);
-          setConfidence(data.signal.confidence);
-          setSignalData(data.signal);
-          setScannedAsset(asset);
-          setExpiryTime(300);
-          setScanProgress(100);
-          if (data.telegram?.success) {
-            setLastSignalSent(format(new Date(), 'HH:mm:ss'));
+          if (!response.ok) {
+            console.warn(`Scan ${asset}: HTTP ${response.status}`);
+            continue;
           }
-          return;
+
+          const data = await response.json();
+          validScans++;
+
+          // Check if we found a strong signal
+          if (data.signal && data.signal.type !== 'WAIT') {
+            setSignal(data.signal.type);
+            setConfidence(data.signal.confidence);
+            setSignalData(data.signal);
+            setScannedAsset(asset);
+            setExpiryTime(300);
+            setScanProgress(100);
+            if (data.telegram?.success) {
+              setLastSignalSent(format(new Date(), 'HH:mm:ss'));
+            }
+            return;
+          }
+        } catch (err) {
+          console.warn(`Scan ${asset}: ${err}`);
+          continue;
         }
       }
 
       // No strong signal found in any asset
       setScanProgress(100);
-      setError(`No strong signals detected across all ${assetsToScan.length} OTC pairs`);
+      if (validScans === 0) {
+        setError('Could not scan pairs - check SSID validity');
+      } else {
+        setError(`No strong signals across ${assetsToScan.length} pairs (checked ${validScans})`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error generating signal');
     } finally {
