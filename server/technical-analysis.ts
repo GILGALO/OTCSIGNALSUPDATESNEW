@@ -231,11 +231,19 @@ export function generateSignalFromTechnicals(metrics: TechnicalMetrics, currentP
   }
   maxScore += 25;
   
-  // Momentum
-  if (metrics.momentum === 'STRONG') {
-    score += 20;
-  } else if (metrics.momentum === 'MODERATE') {
-    score += 10;
+  // Momentum (applies to current trend direction)
+  if (metrics.trend === 'BULLISH') {
+    if (metrics.momentum === 'STRONG') {
+      score += 20;
+    } else if (metrics.momentum === 'MODERATE') {
+      score += 10;
+    }
+  } else if (metrics.trend === 'BEARISH') {
+    if (metrics.momentum === 'STRONG') {
+      score -= 20;
+    } else if (metrics.momentum === 'MODERATE') {
+      score -= 10;
+    }
   }
   maxScore += 20;
   
@@ -248,7 +256,8 @@ export function generateSignalFromTechnicals(metrics: TechnicalMetrics, currentP
   maxScore += 10;
   
   const normalizedScore = (score / maxScore) * 100;
-  const confidence = Math.max(0, Math.min(100, 50 + normalizedScore / 2));
+  // Confidence is based on absolute strength, not direction
+  const confidence = Math.min(100, Math.abs(normalizedScore / 2) + 50);
   
   let type: 'CALL' | 'PUT' | 'WAIT' = 'WAIT';
   if (confidence > 60) {
