@@ -7,9 +7,9 @@ channel = "stable-25_05"
 
 [deployment]
 deploymentTarget = "vm"
-build = ["bash", "-c", "npm run build && npx puppeteer browsers install chrome"]
+build = ["bash", "-c", "npm run build && PUPPETEER_SKIP_CHROME_HEADLESS_SHELL_WRAPPER=true npm exec -- puppeteer browsers install chrome"]
 publicDir = "dist/public"
-run = ["npm", "start"]
+run = ["bash", "-c", "export PUPPETEER_CACHE_DIR=/opt/render/.cache/puppeteer && npm start"]
 
 [[ports]]
 localPort = 5000
@@ -50,3 +50,7 @@ expertMode = true
 
 [userenv.development]
 PORT = "5000"
+
+[userenv.production]
+PUPPETEER_CACHE_DIR = "/opt/render/.cache/puppeteer"
+PUPPETEER_SKIP_CHROME_HEADLESS_SHELL_WRAPPER = "true"
