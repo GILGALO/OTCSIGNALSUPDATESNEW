@@ -89,52 +89,107 @@ export class PocketOptionBrowserClient {
 
   async getM5Candles(symbol: string, count: number = 50): Promise<CandleData[]> {
     if (!this.isConnected || !this.page) {
-      console.warn('Browser not connected, using fallback data');
-      return this.generateFallbackCandles(symbol, count);
+      console.warn('Browser not connected, reconnecting...');
+      await this.connect();
     }
 
     try {
-      console.log(`📊 Fetching ${symbol} candles...`);
+      console.log(`📊 Fetching REAL ${symbol} candles from Pocket Option...`);
       
-      // Navigate to trading page
-      await this.page.goto(`https://pocketoption.com/trade/${symbol.replace('/', '_')}`, {
-        waitUntil: 'networkidle2',
-        timeout: 15000,
-      }).catch(() => null);
+      // Navigate to trading page with symbol
+      const tradingUrl = `https://pocketoption.com/en/trade/${symbol.replace('/', '_')}`;
+      await this.page!.goto(tradingUrl, {
+        waitUntil: 'domcontentloaded',
+        timeout: 20000,
+      });
 
-      // Wait a moment for chart to load
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Wait for chart to fully load
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
-      // Extract candle data from the chart
-      const candles = await this.page.evaluate(() => {
-        const candleElements = document.querySelectorAll('[data-candle]');
+      // Try multiple selector strategies to extract real candle data
+      const candles = await this.page!.evaluate((sym: string) => {
         const data: any[] = [];
 
-        candleElements.forEach((el) => {
-          const timestamp = parseInt(el.getAttribute('data-time') || '0');
-          const open = parseFloat(el.getAttribute('data-open') || '0');
-          const high = parseFloat(el.getAttribute('data-high') || '0');
-          const low = parseFloat(el.getAttribute('data-low') || '0');
-          const close = parseFloat(el.getAttribute('data-close') || '0');
-          const volume = parseInt(el.getAttribute('data-volume') || '0');
+        // Strategy 1: Look for TradingView chart data (most common)
+        const tvData = (window as any).__INITIAL_STATE__?.data?.quotes;
+        if (tvData && Array.isArray(tvData)) {
+          return tvData.slice(-50).map((c: any) => ({
+            timestamp: Math.floor(c.time / 1000),
+            open: c.o,
+            high: c.h,
+            low: c.l,
+            close: c.c,
+            volume: c.v || 0,
+          }));
+        }
 
-          if (timestamp && close > 0) {
-            data.push({ timestamp, open, high, low, close, volume });
+        // Strategy 2: Look for canvas-based chart data in window object
+        const chartWindow = (window as any).chartData || (window as any).__chartState__;
+        if (chartWindow?.candles) {
+          return chartWindow.candles.slice(-50);
+        }
+
+        // Strategy 3: Look for SVG candle elements
+        const svgCandles = document.querySelectorAll('g[data-candle], rect[data-bar]');
+        svgCandles.forEach((el) => {
+          const transform = el.getAttribute('transform');
+          const dataAttrs = el.attributes;
+          
+          if (transform) {
+            const closeVal = el.getAttribute('data-close');
+            const openVal = el.getAttribute('data-open');
+            const highVal = el.getAttribute('data-high');
+            const lowVal = el.getAttribute('data-low');
+            
+            if (closeVal) {
+              data.push({
+                timestamp: Date.now() / 1000,
+                open: parseFloat(openVal || '0'),
+                high: parseFloat(highVal || '0'),
+                low: parseFloat(lowVal || '0'),
+                close: parseFloat(closeVal),
+                volume: 1000,
+              });
+            }
           }
         });
 
-        return data;
-      });
+        if (data.length > 0) return data.slice(-50);
 
-      if (candles.length > 0) {
-        console.log(`✅ Retrieved ${candles.length} real candles from Pocket Option`);
+        // Strategy 4: Try to extract from any data-price elements
+        const priceElements = document.querySelectorAll('[data-price], [data-candle-data]');
+        priceElements.forEach((el) => {
+          const priceText = el.textContent;
+          const dataStr = el.getAttribute('data-candle-data');
+          if (dataStr) {
+            try {
+              const parsed = JSON.parse(dataStr);
+              if (parsed.close) {
+                data.push({
+                  timestamp: parsed.time || Date.now() / 1000,
+                  open: parsed.open || 0,
+                  high: parsed.high || 0,
+                  low: parsed.low || 0,
+                  close: parsed.close,
+                  volume: parsed.volume || 0,
+                });
+              }
+            } catch (e) {}
+          }
+        });
+
+        return data.length > 0 ? data.slice(-50) : [];
+      }, symbol);
+
+      if (candles.length >= 26) {
+        console.log(`✅ Retrieved ${candles.length} REAL candles for ${symbol}`);
         return candles.slice(-count);
       }
 
-      console.log('⚠️ No candle data found, using fallback');
+      console.log(`⚠️ Only got ${candles.length} real candles, generating realistic fallback...`);
       return this.generateFallbackCandles(symbol, count);
     } catch (error) {
-      console.error(`Error fetching ${symbol} candles:`, error);
+      console.error(`Error fetching ${symbol}:`, error);
       return this.generateFallbackCandles(symbol, count);
     }
   }
