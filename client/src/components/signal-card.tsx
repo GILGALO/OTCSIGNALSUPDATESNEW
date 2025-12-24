@@ -24,9 +24,9 @@ interface GeneratedSignal {
   technicals: any;
 }
 
-// Top liquid pairs only - fastest scans, most signals
+// Top OTC liquid pairs - fastest scans, most signals (includes your winning signals)
 const ASSETS_FOR_AUTO_SCAN = [
-  'EUR/USD', 'GBP/USD', 'USD/JPY', 'EUR/JPY', 'AUD/USD',
+  'EUR/USD', 'GBP/USD', 'USD/JPY', 'USD/CHF', 'EUR/JPY',
 ];
 
 export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD' }: SignalCardProps) {
