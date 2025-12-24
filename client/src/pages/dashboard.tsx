@@ -66,20 +66,20 @@ export default function Dashboard() {
           </div>
         </div>
         
-        <div className="hidden md:flex items-center gap-6 bg-secondary/30 p-2 rounded-xl border border-white/5 backdrop-blur-md">
+        <div className="flex items-center gap-6 bg-secondary/30 p-2 rounded-xl border border-white/5 backdrop-blur-md">
            
            <div className="flex items-center gap-2">
                <button 
                 onClick={() => setMode('AUTO')}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${mode === 'AUTO' ? 'bg-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.4)]' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`px-3 md:px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${mode === 'AUTO' ? 'bg-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.4)]' : 'text-muted-foreground hover:text-foreground'}`}
                >
-                <Timer className="w-3 h-3" /> AUTO
+                <Timer className="w-3 h-3" /> <span className="hidden sm:inline">AUTO</span>
                </button>
                <button 
                 onClick={() => setMode('MANUAL')}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${mode === 'MANUAL' ? 'bg-accent text-accent-foreground shadow-[0_0_15px_rgba(var(--accent),0.4)]' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`px-3 md:px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${mode === 'MANUAL' ? 'bg-accent text-accent-foreground shadow-[0_0_15px_rgba(var(--accent),0.4)]' : 'text-muted-foreground hover:text-foreground'}`}
                >
-                <Zap className="w-3 h-3" /> MANUAL
+                <Zap className="w-3 h-3" /> <span className="hidden sm:inline">MANUAL</span>
                </button>
            </div>
 
@@ -92,7 +92,7 @@ export default function Dashboard() {
                     className="data-[state=checked]:bg-primary"
                    />
                    <Label htmlFor="auto-active" className={`text-xs font-mono font-bold ${isAutoActive ? 'text-primary text-neon-blue' : 'text-muted-foreground'}`}>
-                       {isAutoActive ? 'ACTIVE' : 'PAUSED'}
+                       <span className="hidden sm:inline">{isAutoActive ? 'ACTIVE' : 'PAUSED'}</span>
                    </Label>
                </div>
            )}
