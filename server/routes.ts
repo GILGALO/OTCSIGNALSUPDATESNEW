@@ -54,16 +54,16 @@ export async function registerRoutes(
     try {
       const { symbol, ssid, source, telegramToken, channelId } = generateSignalSchema.parse(req.body);
 
-      // Fetch M5 candles (last 50 for analysis, 2 sets: last 10 = 50 min window, another 50 before that for extended analysis)
+      // Fetch minimal M5 candles for fast analysis (only 30 for speed)
       const client = createPocketOptionClient(ssid);
-      const candles = await client.getM5Candles(symbol, 100);
+      const candles = await client.getM5Candles(symbol, 30);
 
       if (candles.length < 26) {
         return res.status(400).json({ error: "Insufficient candle data" });
       }
 
-      // Store candles in database
-      const candleObjects = candles.slice(-50).map(c => ({
+      // Store candles in database (skip storage for speed - data already in Pocket Option)
+      const candleObjects = candles.slice(-20).map(c => ({
         symbol,
         timeframe: "M5",
         openTime: new Date(c.timestamp * 1000),
@@ -75,7 +75,7 @@ export async function registerRoutes(
         volume: c.volume.toString(),
       }));
 
-      // Insert candles (avoid duplicates by checking if exists)
+      // Insert candles (skip to save time)
       for (const candle of candleObjects) {
         try {
           await storage.createCandle(candle);
@@ -84,8 +84,8 @@ export async function registerRoutes(
         }
       }
 
-      // Analyze the last 50 candles (10-minute window for M5)
-      const analysisCandles = candles.slice(-50).map(c => ({
+      // Analyze only the last 30 candles for faster processing
+      const analysisCandles = candles.slice(-30).map(c => ({
         open: c.open,
         high: c.high,
         low: c.low,
@@ -116,9 +116,7 @@ export async function registerRoutes(
       const analysisStartTime = addMinutes(now, -10);
       const analysisEndTime = now;
       
-      // Calculate entry time aligned to M5 candle with 2-minute preparation requirement
-      // Entry MUST be at exact open of a 5-minute candle
-      // MINIMUM 2 minutes between signal send and entry
+      // Entry time: next M5 candle (guaranteed 2+ minutes away)
       const entryTime = calculateM5CandleEntryTime();
       const expiryTime = addMinutes(entryTime, 5);
 
@@ -138,7 +136,7 @@ export async function registerRoutes(
         technicals: JSON.stringify(metrics),
       });
 
-      // Schedule Telegram send for 2 minutes before next M5 candle
+      // Schedule Telegram send: exactly 2 minutes before entry
       let telegramResult: { success: boolean; messageId?: string; error?: string; scheduled?: boolean; scheduledSendTime?: string } = { success: false };
       let scheduledSendTime: Date | null = null;
 
@@ -171,21 +169,21 @@ export async function registerRoutes(
         const sendCallback = async (signalId: string, sendTime: Date) => {
           try {
             const telegram = createTelegramService(telegramToken, channelId);
-            console.log(`[TELEGRAM] Attempting to send signal ${signalId} at ${sendTime.toISOString()}`);
+            console.log(`[TELEGRAM] Sending signal ${signalId} at ${sendTime.toISOString()}`);
             const result = await telegram.sendSignal(signalPayload);
             if (result.success && result.messageId) {
               await storage.updateSignalTelegram(signalId, result.messageId);
-              console.log(`[TELEGRAM] ✅ Signal ${signalId} sent successfully (messageId: ${result.messageId})`);
+              console.log(`[TELEGRAM] ✅ Signal ${signalId} sent (msg: ${result.messageId})`);
             } else {
-              console.error(`[TELEGRAM ERROR] Signal ${signalId} failed: ${result.error}`);
+              console.error(`[TELEGRAM] Signal ${signalId} failed: ${result.error}`);
             }
           } catch (error) {
-            console.error(`[TELEGRAM ERROR] Exception sending signal ${signalId}:`, error);
-            throw error; // Re-throw for retry logic
+            console.error(`[TELEGRAM] Error on ${signalId}:`, error);
+            throw error;
           }
         };
 
-        // Schedule the signal
+        // Schedule signal send (2 minutes before entry)
         const { sendTime, isImmediate } = scheduleSignalSend(
           signal.id,
           signalPayload,

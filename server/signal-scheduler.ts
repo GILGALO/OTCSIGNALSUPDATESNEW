@@ -1,4 +1,4 @@
-// Signal Scheduler - Schedules Telegram sends 2 minutes before M5 candle starts
+// Signal Scheduler - Sends signals at precise times (2-3 minutes before M5 candle entry)
 
 interface ScheduledSignal {
   id: string;
@@ -22,63 +22,56 @@ interface ScheduledSignal {
 const scheduledSignals = new Map<string, ScheduledSignal>();
 
 /**
- * Calculate the next M5 candle start time
+ * Get the current M5 candle start time
  * M5 candles start at: 00:00, 00:05, 00:10, 00:15, etc.
  */
-export function getNextM5CandleStartTime(): Date {
+export function getCurrentM5CandleStartTime(): Date {
   const now = new Date();
   const minutes = now.getMinutes();
-  const seconds = now.getSeconds();
-  const milliseconds = now.getMilliseconds();
-
-  // Calculate how many minutes past the hour
   const minutesPastHour = minutes % 5;
   
-  // Calculate minutes until next 5-minute boundary
-  let minutesUntilNextBoundary = 5 - minutesPastHour;
+  const currentCandle = new Date(now);
+  currentCandle.setMinutes(currentCandle.getMinutes() - minutesPastHour);
+  currentCandle.setSeconds(0);
+  currentCandle.setMilliseconds(0);
   
-  if (minutesPastHour === 0 && seconds === 0 && milliseconds === 0) {
-    // Already at exact boundary, next is 5 minutes away
-    minutesUntilNextBoundary = 5;
-  }
+  return currentCandle;
+}
 
-  const nextCandle = new Date(now);
-  nextCandle.setMinutes(nextCandle.getMinutes() + minutesUntilNextBoundary);
-  nextCandle.setSeconds(0);
-  nextCandle.setMilliseconds(0);
-
+/**
+ * Get the next M5 candle start time
+ */
+export function getNextM5CandleStartTime(): Date {
+  const currentCandle = getCurrentM5CandleStartTime();
+  const nextCandle = new Date(currentCandle);
+  nextCandle.setMinutes(nextCandle.getMinutes() + 5);
   return nextCandle;
 }
 
 /**
- * Calculate entry time aligned to M5 candle with 2-minute preparation requirement
- * 
- * Rules:
- * 1. Entry time MUST be at exact open of a 5-minute candle
- * 2. MINIMUM 2 FULL MINUTES between signal send and entry time
- * 3. If time to next candle < 2 minutes: SKIP and use following candle
+ * Calculate entry time: the next M5 candle that is at least 2 minutes away
+ * If less than 2 minutes to next candle, use the candle after that
  */
 export function calculateM5CandleEntryTime(): Date {
   const now = new Date();
   const nextCandleStart = getNextM5CandleStartTime();
   
-  // Calculate time remaining until next candle
+  // Time remaining until next candle (in milliseconds)
   const timeUntilNextCandle = nextCandleStart.getTime() - now.getTime();
   const minutesRemaining = timeUntilNextCandle / (1000 * 60);
   
-  // If less than 2 minutes to next candle, skip it and use the following candle
+  // If less than 2 minutes to next candle, use the candle after that
   if (minutesRemaining < 2) {
-    const skipCandle = new Date(nextCandleStart);
-    skipCandle.setMinutes(skipCandle.getMinutes() + 5);
-    return skipCandle;
+    const followingCandle = new Date(nextCandleStart);
+    followingCandle.setMinutes(followingCandle.getMinutes() + 5);
+    return followingCandle;
   }
   
-  // Otherwise use the next candle
   return nextCandleStart;
 }
 
 /**
- * Calculate send time: 2 minutes before entry time
+ * Calculate send time: exactly 2 minutes before entry time (for predictable delivery)
  */
 export function getSignalSendTime(): Date {
   const entryTime = calculateM5CandleEntryTime();
