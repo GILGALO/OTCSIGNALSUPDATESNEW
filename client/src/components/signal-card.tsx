@@ -93,6 +93,8 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
 
       // Scan each asset for a strong signal
       let validScans = 0;
+      let errorDetails: string[] = [];
+      
       for (let idx = 0; idx < assetsToScan.length; idx++) {
         const asset = assetsToScan[idx];
         const progressPercent = Math.floor((idx / assetsToScan.length) * 100);
@@ -111,12 +113,14 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
             }),
           });
 
+          const data = await response.json();
+          
           if (!response.ok) {
-            console.warn(`Scan ${asset}: HTTP ${response.status}`);
+            console.warn(`Scan ${asset}: HTTP ${response.status}`, data);
+            errorDetails.push(`${asset}: ${data.error || data.message || 'Failed'}`);
             continue;
           }
 
-          const data = await response.json();
           validScans++;
 
           // Check if we found a strong signal
@@ -133,7 +137,9 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
             return;
           }
         } catch (err) {
-          console.warn(`Scan ${asset}: ${err}`);
+          const errMsg = err instanceof Error ? err.message : 'Network error';
+          console.warn(`Scan ${asset}: ${errMsg}`);
+          errorDetails.push(`${asset}: ${errMsg}`);
           continue;
         }
       }
@@ -141,7 +147,8 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
       // No strong signal found in any asset
       setScanProgress(100);
       if (validScans === 0) {
-        setError('Could not scan pairs - check SSID validity');
+        const firstError = errorDetails[0] || 'Market data unavailable';
+        setError(`${firstError}. Verify your SSID is correct.`);
       } else {
         setError(`No strong signals across ${assetsToScan.length} pairs (checked ${validScans})`);
       }
