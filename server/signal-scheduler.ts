@@ -89,6 +89,7 @@ export function getSignalSendTime(): Date {
 
 /**
  * Schedule a signal to be sent to Telegram at the calculated time
+ * For MANUAL signals, send immediately. For AUTO signals, schedule appropriately.
  */
 export function scheduleSignalSend(
   signalId: string,
@@ -100,13 +101,31 @@ export function scheduleSignalSend(
   const sendTime = getSignalSendTime();
   const now = new Date();
 
+  // For manual signals (or any signal where current time is past send time), send immediately
   const isImmediate = sendTime.getTime() <= now.getTime();
 
   if (isImmediate) {
-    // Send immediately
-    sendCallback(signalId, now).catch(err => {
-      console.error(`Error sending signal immediately: ${err}`);
-    });
+    // Send immediately without delay
+    console.log(`[SIGNAL SCHEDULER] Signal ${signalId} sending IMMEDIATELY (source: MANUAL)`);
+    
+    // Fire and forget with error handling
+    (async () => {
+      try {
+        await sendCallback(signalId, now);
+        console.log(`[SIGNAL SCHEDULER] Signal ${signalId} sent successfully`);
+      } catch (err) {
+        console.error(`[SIGNAL SCHEDULER] Error sending signal immediately: ${err}`);
+        // Retry after 1 second
+        setTimeout(async () => {
+          try {
+            await sendCallback(signalId, now);
+            console.log(`[SIGNAL SCHEDULER] Signal ${signalId} sent on retry`);
+          } catch (retryErr) {
+            console.error(`[SIGNAL SCHEDULER] Retry failed for signal ${signalId}: ${retryErr}`);
+          }
+        }, 1000);
+      }
+    })();
   } else {
     // Schedule for future time
     const delayMs = sendTime.getTime() - now.getTime();
@@ -114,9 +133,22 @@ export function scheduleSignalSend(
     console.log(`[SIGNAL SCHEDULER] Signal ${signalId} scheduled to send in ${Math.round(delayMs / 1000)}s at ${sendTime.toISOString()}`);
 
     const timeout = setTimeout(() => {
-      sendCallback(signalId, sendTime).catch(err => {
-        console.error(`Error sending scheduled signal: ${err}`);
-      });
+      (async () => {
+        try {
+          await sendCallback(signalId, sendTime);
+        } catch (err) {
+          console.error(`[SIGNAL SCHEDULER] Error sending scheduled signal: ${err}`);
+          // Retry after 1 second
+          setTimeout(async () => {
+            try {
+              await sendCallback(signalId, sendTime);
+              console.log(`[SIGNAL SCHEDULER] Scheduled signal ${signalId} sent on retry`);
+            } catch (retryErr) {
+              console.error(`[SIGNAL SCHEDULER] Retry failed for scheduled signal ${signalId}: ${retryErr}`);
+            }
+          }, 1000);
+        }
+      })();
       scheduledSignals.delete(signalId);
     }, delayMs);
 

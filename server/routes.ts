@@ -171,13 +171,17 @@ export async function registerRoutes(
         const sendCallback = async (signalId: string, sendTime: Date) => {
           try {
             const telegram = createTelegramService(telegramToken, channelId);
+            console.log(`[TELEGRAM] Attempting to send signal ${signalId} at ${sendTime.toISOString()}`);
             const result = await telegram.sendSignal(signalPayload);
             if (result.success && result.messageId) {
               await storage.updateSignalTelegram(signalId, result.messageId);
-              console.log(`[TELEGRAM] Signal ${signalId} sent successfully at ${sendTime.toISOString()}`);
+              console.log(`[TELEGRAM] ✅ Signal ${signalId} sent successfully (messageId: ${result.messageId})`);
+            } else {
+              console.error(`[TELEGRAM ERROR] Signal ${signalId} failed: ${result.error}`);
             }
           } catch (error) {
-            console.error(`[TELEGRAM ERROR] Failed to send signal ${signalId}:`, error);
+            console.error(`[TELEGRAM ERROR] Exception sending signal ${signalId}:`, error);
+            throw error; // Re-throw for retry logic
           }
         };
 
