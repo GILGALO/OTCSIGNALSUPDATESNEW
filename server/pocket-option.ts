@@ -1,6 +1,4 @@
-// Pocket Option API Client - Real Live Market Data via Browser Automation
-
-import { getPocketOptionBrowserClient } from './pocket-option-browser';
+// Pocket Option API Client - Market Data Provider
 
 interface CandleData {
   timestamp: number;
@@ -13,14 +11,23 @@ interface CandleData {
 
 export class PocketOptionClient {
   private ssid: string;
+  private usePuppeteer: boolean;
 
   constructor(ssid: string) {
     this.ssid = ssid;
+    // Detect if we should skip Puppeteer (for Replit environments with missing libraries)
+    this.usePuppeteer = !process.env.REPLIT_ENVIRONMENT; // Skip in Replit
   }
 
   async getM5Candles(symbol: string, count: number = 50): Promise<CandleData[]> {
     try {
+      if (!this.usePuppeteer) {
+        console.log(`📊 Using fallback market data (Puppeteer unavailable)...`);
+        return this.generateFallbackCandles(symbol, count);
+      }
+
       console.log(`🔄 Fetching real market data for ${symbol}...`);
+      const { getPocketOptionBrowserClient } = await import('./pocket-option-browser');
       const client = await getPocketOptionBrowserClient(this.ssid);
       const candles = await client.getM5Candles(symbol, count);
       
@@ -30,7 +37,7 @@ export class PocketOptionClient {
       
       return candles;
     } catch (error) {
-      console.error(`⚠️ Real market data unavailable, generating fallback data: ${error}`);
+      console.log(`⚠️ Real market data unavailable (${error}), generating fallback...`);
       // Return fallback synthetic candles so app can still function
       return this.generateFallbackCandles(symbol, count);
     }
