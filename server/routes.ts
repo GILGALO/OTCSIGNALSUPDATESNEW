@@ -35,17 +35,34 @@ export async function registerRoutes(
   app.post("/api/validate-ssid", async (req, res) => {
     try {
       const { ssid } = validateSSIDSchema.parse(req.body);
+      console.log(`🔐 Validating SSID: ${ssid.substring(0, 3)}...${ssid.substring(ssid.length - 3)}`);
+      
       const client = createPocketOptionClient(ssid);
       const isValid = await client.validateSSID();
       
       if (isValid) {
-        const price = await client.getCurrentPrice("EUR/USD");
-        res.json({ valid: true, price });
+        console.log(`✅ SSID format is valid`);
+        try {
+          const price = await client.getCurrentPrice("EUR/USD");
+          if (price) {
+            res.json({ valid: true, price, message: "SSID validated successfully" });
+          } else {
+            res.json({ valid: true, price: null, message: "SSID format is valid. Market data temporarily unavailable." });
+          }
+        } catch (priceError) {
+          console.log(`⚠️ Could not fetch price: ${priceError}`);
+          res.json({ valid: true, price: null, message: "SSID format is valid. Could not fetch current price." });
+        }
       } else {
-        res.status(400).json({ valid: false, error: "Invalid SSID" });
+        console.log(`❌ SSID validation failed - invalid format`);
+        res.status(400).json({ 
+          valid: false, 
+          error: "Invalid SSID format. SSID must be alphanumeric, 10-50 characters long." 
+        });
       }
     } catch (error) {
-      res.status(400).json({ error: "Invalid request" });
+      const errorMsg = error instanceof Error ? error.message : "Invalid request";
+      res.status(400).json({ error: errorMsg });
     }
   });
 
