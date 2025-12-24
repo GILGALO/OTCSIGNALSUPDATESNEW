@@ -17,6 +17,7 @@ export default function Dashboard() {
   const [mode, setMode] = useState<'AUTO' | 'MANUAL'>('AUTO');
   const [isAutoActive, setIsAutoActive] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [mobileTab, setMobileTab] = useState<'signal' | 'assets' | 'chart' | 'analysis'>('signal');
 
   useEffect(() => {
     const savedSsid = localStorage.getItem('pocket_option_ssid');
@@ -115,21 +116,86 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <main className="flex-1 p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-[1600px] mx-auto w-full z-10">
-        
-        <div className="lg:col-span-1 flex flex-col gap-4 h-full">
-          <AssetList onSelect={setSelectedAsset} selected={selectedAsset} />
-        </div>
+      <main className="flex-1 w-full z-10 overflow-hidden flex flex-col">
+        {/* Desktop Layout */}
+        <div className="hidden lg:grid grid-cols-3 gap-4 p-6 flex-1 max-w-[1600px] mx-auto w-full">
+          <div className="flex flex-col gap-4">
+            <AssetList onSelect={setSelectedAsset} selected={selectedAsset} />
+          </div>
 
-        <div className="lg:col-span-1 flex flex-col gap-4">
-          <SignalCard mode={mode} isAutoActive={isAutoActive} selectedAsset={selectedAsset} />
-          <div className="flex-1">
+          <div className="flex flex-col gap-4">
+            <SignalCard mode={mode} isAutoActive={isAutoActive} selectedAsset={selectedAsset} />
             <MarketAnalysis />
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <TradingChart symbol={selectedAsset} />
           </div>
         </div>
 
-        <div className="lg:col-span-1 flex flex-col gap-4">
-          <TradingChart symbol={selectedAsset} />
+        {/* Mobile Layout with Tabs */}
+        <div className="lg:hidden flex flex-col h-full">
+          {/* Mobile Tab Navigation */}
+          <div className="flex gap-1 p-3 bg-black/40 border-b border-white/10 overflow-x-auto">
+            <button
+              onClick={() => setMobileTab('signal')}
+              className={`px-3 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
+                mobileTab === 'signal' 
+                  ? 'bg-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.4)]' 
+                  : 'text-muted-foreground hover:text-foreground bg-white/5'
+              }`}
+            >
+              Signal
+            </button>
+            <button
+              onClick={() => setMobileTab('assets')}
+              className={`px-3 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
+                mobileTab === 'assets' 
+                  ? 'bg-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.4)]' 
+                  : 'text-muted-foreground hover:text-foreground bg-white/5'
+              }`}
+            >
+              Assets
+            </button>
+            <button
+              onClick={() => setMobileTab('chart')}
+              className={`px-3 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
+                mobileTab === 'chart' 
+                  ? 'bg-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.4)]' 
+                  : 'text-muted-foreground hover:text-foreground bg-white/5'
+              }`}
+            >
+              Chart
+            </button>
+            <button
+              onClick={() => setMobileTab('analysis')}
+              className={`px-3 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
+                mobileTab === 'analysis' 
+                  ? 'bg-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.4)]' 
+                  : 'text-muted-foreground hover:text-foreground bg-white/5'
+              }`}
+            >
+              Analysis
+            </button>
+          </div>
+
+          {/* Tab Content */}
+          <div className="flex-1 overflow-y-auto p-3">
+            {mobileTab === 'signal' && (
+              <SignalCard mode={mode} isAutoActive={isAutoActive} selectedAsset={selectedAsset} />
+            )}
+            {mobileTab === 'assets' && (
+              <AssetList onSelect={setSelectedAsset} selected={selectedAsset} />
+            )}
+            {mobileTab === 'chart' && (
+              <div className="h-full">
+                <TradingChart symbol={selectedAsset} />
+              </div>
+            )}
+            {mobileTab === 'analysis' && (
+              <MarketAnalysis />
+            )}
+          </div>
         </div>
       </main>
     </div>

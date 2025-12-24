@@ -16,17 +16,17 @@ const ASSETS = [
 export function AssetList({ onSelect, selected }: { onSelect: (pair: string) => void, selected: string }) {
   return (
     <Card className="h-full glass-panel flex flex-col">
-      <div className="p-4 border-b border-white/10">
+      <div className="p-3 lg:p-4 border-b border-white/10">
         <h3 className="font-bold text-lg">Assets OTC</h3>
         <p className="text-xs text-muted-foreground">Real-time Payouts</p>
       </div>
       <ScrollArea className="flex-1">
-        <div className="p-2 space-y-2">
+        <div className="p-2 space-y-1 lg:space-y-2">
           {ASSETS.map((asset) => (
             <button
               key={asset.pair}
               onClick={() => onSelect(asset.pair)}
-              className={`w-full flex items-center justify-between p-3 rounded-lg transition-all border ${
+              className={`w-full flex items-center justify-between p-2 lg:p-3 rounded-lg transition-all border text-sm lg:text-base ${
                 selected === asset.pair 
                   ? 'bg-sidebar-primary/20 border-sidebar-primary' 
                   : 'hover:bg-white/5 border-transparent'

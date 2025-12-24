@@ -38,7 +38,7 @@ export function TradingChart({ symbol = "EUR/USD" }: { symbol?: string }) {
   const isUp = data[data.length - 1].price > data[data.length - 2].price;
 
   return (
-    <Card className="w-full h-[400px] p-4 glass-panel border-none bg-black/40 relative overflow-hidden">
+    <Card className="w-full h-[300px] lg:h-[400px] p-4 glass-panel border-none bg-black/40 relative overflow-hidden">
       <div className="absolute top-4 left-4 z-10 flex items-baseline gap-3">
         <h3 className="text-2xl font-bold tracking-tight text-white">{symbol} OTC</h3>
         <span className={`text-lg font-mono font-bold ${isUp ? 'text-primary drop-shadow-[0_0_8px_rgba(0,255,157,0.5)]' : 'text-destructive drop-shadow-[0_0_8px_rgba(255,0,85,0.5)]'}`}>

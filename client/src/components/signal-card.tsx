@@ -130,7 +130,7 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
   };
 
   return (
-    <Card className="relative p-6 glass-panel border-t-2 border-t-white/10 overflow-hidden flex flex-col items-center justify-center min-h-[400px]">
+    <Card className="relative p-4 lg:p-6 glass-panel border-t-2 border-t-white/10 overflow-hidden flex flex-col items-center justify-center min-h-[350px] lg:min-h-[400px]">
       <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-50" />
       
@@ -150,34 +150,34 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
         )}
       </div>
 
-      <div className="mt-8 w-full flex flex-col items-center">
+      <div className="mt-4 lg:mt-8 w-full flex flex-col items-center">
         
         {isScanning ? (
-           <div className="flex flex-col items-center gap-4 w-full max-w-[200px]">
-             <div className="relative w-24 h-24 flex items-center justify-center">
+           <div className="flex flex-col items-center gap-3 lg:gap-4 w-full max-w-[200px]">
+             <div className="relative w-20 lg:w-24 h-20 lg:h-24 flex items-center justify-center">
                <div className="absolute inset-0 border-4 border-primary/20 rounded-full animate-spin-slow" />
                <div className="absolute inset-2 border-4 border-t-primary rounded-full animate-spin" />
-               <Radio className="w-10 h-10 text-primary animate-pulse" />
+               <Radio className="w-8 lg:w-10 h-8 lg:h-10 text-primary animate-pulse" />
              </div>
              <div className="space-y-2 text-center w-full">
-               <span className="text-sm font-bold animate-pulse text-primary text-neon-blue">ANALYZING {selectedAsset}...</span>
+               <span className="text-xs lg:text-sm font-bold animate-pulse text-primary text-neon-blue">ANALYZING {selectedAsset}...</span>
                <Progress value={scanProgress} className="h-1 bg-secondary" indicatorClassName="bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]" />
              </div>
            </div>
         ) : signal === 'WAIT' ? (
-          <div className="flex flex-col items-center gap-6">
-            <div className="w-40 h-40 rounded-full bg-secondary/30 border border-white/5 flex items-center justify-center relative group backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 lg:gap-6">
+            <div className="w-32 lg:w-40 h-32 lg:h-40 rounded-full bg-secondary/30 border border-white/5 flex items-center justify-center relative group backdrop-blur-sm">
               
               {mode === 'AUTO' && !isAutoActive ? (
                   <>
-                    <PauseCircle className="w-16 h-16 text-muted-foreground opacity-50" />
-                    <div className="absolute bottom-8 text-[10px] text-muted-foreground font-mono tracking-widest">SYSTEM PAUSED</div>
+                    <PauseCircle className="w-12 lg:w-16 h-12 lg:h-16 text-muted-foreground opacity-50" />
+                    <div className="absolute bottom-6 lg:bottom-8 text-[10px] text-muted-foreground font-mono tracking-widest">SYSTEM PAUSED</div>
                   </>
               ) : (
                   <>
                     <div className="absolute inset-0 rounded-full bg-primary/5 animate-ping opacity-20" />
                     <div className="absolute inset-2 rounded-full border border-primary/20 animate-spin-slow opacity-50 border-t-transparent border-b-transparent" />
-                    <Crosshair className="w-16 h-16 text-primary/50 group-hover:text-primary transition-colors duration-500" />
+                    <Crosshair className="w-12 lg:w-16 h-12 lg:h-16 text-primary/50 group-hover:text-primary transition-colors duration-500" />
                   </>
               )}
             </div>
@@ -191,7 +191,7 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
             {mode === 'MANUAL' ? (
               <Button 
                 size="lg" 
-                className="bg-primary hover:bg-primary/90 text-background font-black tracking-wide px-8 py-6 text-lg shadow-[0_0_30px_rgba(var(--primary),0.4)] transition-all hover:scale-105 active:scale-95"
+                className="bg-primary hover:bg-primary/90 text-background font-black tracking-wide px-6 lg:px-8 py-4 lg:py-6 text-sm lg:text-lg shadow-[0_0_30px_rgba(var(--primary),0.4)] transition-all hover:scale-105 active:scale-95"
                 onClick={generateSignal}
               >
                 <Zap className="w-5 h-5 mr-2" />
@@ -199,55 +199,55 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
               </Button>
             ) : (
               <div className="text-center space-y-1">
-                <h3 className="text-lg font-bold text-muted-foreground">
+                <h3 className="text-base lg:text-lg font-bold text-muted-foreground">
                     {isAutoActive ? 'WAITING FOR SIGNAL' : 'AUTO-TRADING PAUSED'}
                 </h3>
-                <p className="text-xs text-muted-foreground/60 font-mono">
+                <p className="text-[10px] lg:text-xs text-muted-foreground/60 font-mono">
                     {isAutoActive ? 'AI ANALYZING PRICE ACTION...' : 'RESUME TO START SCANNING'}
                 </p>
               </div>
             )}
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-4 z-10 w-full animate-in zoom-in duration-300">
-            <div className={`relative flex items-center justify-center w-40 h-40 rounded-full border-8 ${signal === 'CALL' ? 'border-primary bg-primary/10 shadow-[0_0_60px_rgba(var(--primary),0.4)]' : 'border-destructive bg-destructive/10 shadow-[0_0_60px_rgba(var(--destructive),0.4)]'}`}>
+          <div className="flex flex-col items-center gap-3 lg:gap-4 z-10 w-full animate-in zoom-in duration-300">
+            <div className={`relative flex items-center justify-center w-32 lg:w-40 h-32 lg:h-40 rounded-full border-8 ${signal === 'CALL' ? 'border-primary bg-primary/10 shadow-[0_0_60px_rgba(var(--primary),0.4)]' : 'border-destructive bg-destructive/10 shadow-[0_0_60px_rgba(var(--destructive),0.4)]'}`}>
               <div className="absolute inset-0 rounded-full border-2 border-white/10 animate-ping opacity-20"></div>
               {signal === 'CALL' ? (
-                <ArrowUp className="w-20 h-20 text-primary drop-shadow-[0_0_20px_rgba(var(--primary),0.8)] animate-bounce" />
+                <ArrowUp className="w-16 lg:w-20 h-16 lg:h-20 text-primary drop-shadow-[0_0_20px_rgba(var(--primary),0.8)] animate-bounce" />
               ) : (
-                <ArrowDown className="w-20 h-20 text-destructive drop-shadow-[0_0_20px_rgba(var(--destructive),0.8)] animate-bounce" />
+                <ArrowDown className="w-16 lg:w-20 h-16 lg:h-20 text-destructive drop-shadow-[0_0_20px_rgba(var(--destructive),0.8)] animate-bounce" />
               )}
             </div>
 
-            <div className="text-center space-y-1 w-full">
-              <h1 className={`text-5xl font-black tracking-tighter ${signal === 'CALL' ? 'text-primary' : 'text-destructive'}`}>
+            <div className="text-center space-y-0.5 lg:space-y-1 w-full">
+              <h1 className={`text-3xl lg:text-5xl font-black tracking-tighter ${signal === 'CALL' ? 'text-primary' : 'text-destructive'}`}>
                 {signal}
               </h1>
-              <p className="text-lg font-bold text-foreground">{selectedAsset}</p>
-              <div className="flex items-center justify-center gap-2 text-sm font-mono text-muted-foreground">
+              <p className="text-sm lg:text-lg font-bold text-foreground">{selectedAsset}</p>
+              <div className="flex items-center justify-center gap-2 text-xs lg:text-sm font-mono text-muted-foreground">
                 <Timer className="w-3 h-3" />
                 <span>EXPIRES IN <span className="text-white font-bold">{formatTime(expiryTime)}</span></span>
               </div>
             </div>
 
-            <div className="w-full space-y-2 px-3">
-              <div className="bg-black/40 border border-white/10 rounded-lg p-3 space-y-2">
+            <div className="w-full space-y-2 px-2 lg:px-3">
+              <div className="bg-black/40 border border-white/10 rounded-lg p-2 lg:p-3 space-y-2">
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="bg-white/5 p-2 rounded">
-                    <p className="text-muted-foreground text-[10px]">ENTRY</p>
-                    <p className="font-bold text-sm">{signalData?.entryPrice.toFixed(5)}</p>
+                  <div className="bg-white/5 p-1.5 lg:p-2 rounded">
+                    <p className="text-muted-foreground text-[9px] lg:text-[10px]">ENTRY</p>
+                    <p className="font-bold text-xs lg:text-sm">{signalData?.entryPrice.toFixed(5)}</p>
                   </div>
-                  <div className="bg-white/5 p-2 rounded">
-                    <p className="text-muted-foreground text-[10px]">STOP LOSS</p>
-                    <p className="font-bold text-sm text-destructive">{signalData?.stopLoss.toFixed(5)}</p>
+                  <div className="bg-white/5 p-1.5 lg:p-2 rounded">
+                    <p className="text-muted-foreground text-[9px] lg:text-[10px]">STOP LOSS</p>
+                    <p className="font-bold text-xs lg:text-sm text-destructive">{signalData?.stopLoss.toFixed(5)}</p>
                   </div>
-                  <div className="bg-white/5 p-2 rounded">
-                    <p className="text-muted-foreground text-[10px]">TAKE PROFIT</p>
-                    <p className="font-bold text-sm text-primary">{signalData?.takeProfit.toFixed(5)}</p>
+                  <div className="bg-white/5 p-1.5 lg:p-2 rounded">
+                    <p className="text-muted-foreground text-[9px] lg:text-[10px]">TAKE PROFIT</p>
+                    <p className="font-bold text-xs lg:text-sm text-primary">{signalData?.takeProfit.toFixed(5)}</p>
                   </div>
-                  <div className="bg-white/5 p-2 rounded">
-                    <p className="text-muted-foreground text-[10px]">CONFIDENCE</p>
-                    <p className="font-bold text-sm">{confidence}%</p>
+                  <div className="bg-white/5 p-1.5 lg:p-2 rounded">
+                    <p className="text-muted-foreground text-[9px] lg:text-[10px]">CONFIDENCE</p>
+                    <p className="font-bold text-xs lg:text-sm">{confidence}%</p>
                   </div>
                 </div>
               </div>
