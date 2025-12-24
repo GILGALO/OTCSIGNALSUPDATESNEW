@@ -49,21 +49,40 @@ export async function registerRoutes(
     }
   });
 
+  // Track last signal time per symbol for M5 cycle debouncing
+  const lastSignalTime = new Map<string, Date>();
+
   // Generate trading signal
   app.post("/api/generate-signal", async (req, res) => {
     try {
       const { symbol, ssid, source, telegramToken, channelId } = generateSignalSchema.parse(req.body);
 
-      // Fetch minimal M5 candles for fast analysis (only 30 for speed)
+      // M5 CYCLE DEBOUNCING: Only one signal per M5 candle cycle
+      const lastSignal = lastSignalTime.get(symbol);
+      if (lastSignal) {
+        const timeSinceLastSignal = Date.now() - lastSignal.getTime();
+        const FIVE_MINUTES_MS = 5 * 60 * 1000;
+        
+        if (timeSinceLastSignal < FIVE_MINUTES_MS) {
+          const timeRemaining = Math.ceil((FIVE_MINUTES_MS - timeSinceLastSignal) / 1000);
+          return res.json({ 
+            signal: null, 
+            message: `Already sent signal for ${symbol} this M5 cycle. Wait ${timeRemaining}s for next cycle.`,
+            cooldown: timeRemaining
+          });
+        }
+      }
+
+      // Fetch ONLY 26 candles needed for technical analysis (optimize token usage)
       const client = createPocketOptionClient(ssid);
-      const candles = await client.getM5Candles(symbol, 30);
+      const candles = await client.getM5Candles(symbol, 26);
 
       if (candles.length < 26) {
         return res.status(400).json({ error: "Insufficient candle data" });
       }
 
-      // Store candles in database (skip storage for speed - data already in Pocket Option)
-      const candleObjects = candles.slice(-20).map(c => ({
+      // Store last 5 candles for database record (minimal storage)
+      const candleObjects = candles.slice(-5).map(c => ({
         symbol,
         timeframe: "M5",
         openTime: new Date(c.timestamp * 1000),
@@ -75,7 +94,7 @@ export async function registerRoutes(
         volume: c.volume.toString(),
       }));
 
-      // Insert candles (skip to save time)
+      // Insert candles with error handling
       for (const candle of candleObjects) {
         try {
           await storage.createCandle(candle);
@@ -84,8 +103,8 @@ export async function registerRoutes(
         }
       }
 
-      // Analyze only the last 30 candles for faster processing
-      const analysisCandles = candles.slice(-30).map(c => ({
+      // Analyze all 26 candles for maximum accuracy
+      const analysisCandles = candles.map(c => ({
         open: c.open,
         high: c.high,
         low: c.low,
@@ -97,8 +116,8 @@ export async function registerRoutes(
       const currentPrice = candles[candles.length - 1].close;
       const { type, confidence } = generateSignalFromTechnicals(metrics, currentPrice);
 
-      // Minimum accuracy threshold for HIGH WIN RATE signals
-      const MINIMUM_CONFIDENCE_THRESHOLD = 70;
+      // STRICTER accuracy threshold for WINNING signals only
+      const MINIMUM_CONFIDENCE_THRESHOLD = 75;
       
       if (type === "WAIT") {
         return res.json({ 
@@ -152,6 +171,9 @@ export async function registerRoutes(
         expiryTime,
         technicals: JSON.stringify(metrics),
       });
+
+      // RECORD THIS SIGNAL TIME FOR M5 CYCLE TRACKING (one signal per cycle)
+      lastSignalTime.set(symbol, new Date());
 
       // Schedule Telegram send: exactly 2 minutes before entry
       let telegramResult: { success: boolean; messageId?: string; error?: string; scheduled?: boolean; scheduledSendTime?: string } = { success: false };
