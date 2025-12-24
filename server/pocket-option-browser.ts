@@ -26,23 +26,8 @@ export class PocketOptionBrowserClient {
     try {
       console.log('🌐 Launching headless browser for Pocket Option...');
       
-      // Get Chrome executable path with fallback
-      let executablePath: string | undefined;
-      const cacheDir = process.env.PUPPETEER_CACHE_DIR || '/opt/render/.cache/puppeteer';
-      
-      // Try common Chrome locations
-      const chromePaths = [
-        `${cacheDir}/chrome/linux-143.0.7499.169/chrome-linux64/chrome`,
-        `${cacheDir}/chrome/linux-*/chrome-linux64/chrome`,
-        '/usr/bin/chromium-browser',
-        '/usr/bin/chromium',
-        '/snap/bin/chromium',
-      ];
-      
-      console.log(`📍 Looking for Chrome in cache: ${cacheDir}`);
-      
-      this.browser = await puppeteer.launch({
-        headless: 'new',
+      const launchOptions: any = {
+        headless: true,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
@@ -54,7 +39,20 @@ export class PocketOptionBrowserClient {
           '--disable-default-apps',
           '--no-first-run',
         ],
-      });
+      };
+
+      // Try to resolve Chrome executable path (important for Render)
+      try {
+        const execPath = await (puppeteer as any).resolveExecutable?.();
+        if (execPath) {
+          console.log(`📍 Using Chrome from: ${execPath}`);
+          launchOptions.executablePath = execPath;
+        }
+      } catch (e) {
+        console.log('ℹ️ Chrome auto-detection skipped, letting Puppeteer find it');
+      }
+      
+      this.browser = await puppeteer.launch(launchOptions);
 
       this.page = await this.browser.newPage();
       
