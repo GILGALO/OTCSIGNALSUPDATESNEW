@@ -116,8 +116,8 @@ export async function registerRoutes(
       const currentPrice = candles[candles.length - 1].close;
       const { type, confidence } = generateSignalFromTechnicals(metrics, currentPrice);
 
-      // STRICTER accuracy threshold for WINNING signals only
-      const MINIMUM_CONFIDENCE_THRESHOLD = 75;
+      // Balanced accuracy threshold - enough to be profitable, not so strict we miss opportunities
+      const MINIMUM_CONFIDENCE_THRESHOLD = 60;
       
       if (type === "WAIT") {
         return res.json({ 

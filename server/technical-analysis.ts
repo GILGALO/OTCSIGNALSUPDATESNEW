@@ -278,25 +278,16 @@ export function generateSignalFromTechnicals(metrics: TechnicalMetrics, currentP
   const bullishRatio = bullishScore / totalScore;
   const bearishRatio = bearishScore / totalScore;
 
-  // Only generate signals with VERY strong agreement (75%+ confidence)
-  if (bullishRatio > bearishRatio && bullishScore >= 8) {
-    // Strong bullish agreement
+  // Generate signals with good confidence when indicators align
+  if (bullishRatio > bearishRatio && bullishScore >= 6) {
+    // Bullish signal
     type = 'CALL';
-    // Base confidence on how overwhelmingly bullish
-    confidence = Math.min(95, 70 + Math.round((bullishRatio - 0.5) * 100));
-  } else if (bearishRatio > bullishRatio && bearishScore >= 8) {
-    // Strong bearish agreement
+    // Base confidence on how strong the bullish agreement is
+    confidence = Math.min(90, 50 + Math.round((bullishRatio - 0.5) * 80) + bullishScore);
+  } else if (bearishRatio > bullishRatio && bearishScore >= 6) {
+    // Bearish signal
     type = 'PUT';
-    confidence = Math.min(95, 70 + Math.round((bearishRatio - 0.5) * 100));
-  } else if (bullishScore >= 6 || bearishScore >= 6) {
-    // Moderate signal, return with appropriate confidence
-    if (bullishScore > bearishScore) {
-      type = 'CALL';
-      confidence = Math.min(75, 60 + bullishScore);
-    } else {
-      type = 'PUT';
-      confidence = Math.min(75, 60 + bearishScore);
-    }
+    confidence = Math.min(90, 50 + Math.round((bearishRatio - 0.5) * 80) + bearishScore);
   }
 
   return { type, confidence: Math.round(Math.max(0, confidence)) };
