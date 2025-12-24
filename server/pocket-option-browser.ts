@@ -111,14 +111,14 @@ export class PocketOptionBrowserClient {
       // Try multiple selector strategies to extract REAL OTC candle data
       const candles = await this.page!.evaluate((sym: string) => {
         const data: any[] = [];
+        const MIN_CANDLES = 26;
 
         // Strategy 1: Look for Pocket Option's OTC chart candlestick data
         const otcChartData = (window as any).__STORE__?.getState?.()?.chart?.candles ||
                              (window as any).chartState?.candles ||
                              (window as any).__POCKET_OPTION__?.charts?.candles;
-        if (otcChartData && Array.isArray(otcChartData)) {
-          console.log(`📊 Found OTC chart data with ${otcChartData.length} candles`);
-          return otcChartData.slice(-50).map((c: any) => ({
+        if (otcChartData && Array.isArray(otcChartData) && otcChartData.length >= MIN_CANDLES) {
+          const extracted = otcChartData.slice(-50).map((c: any) => ({
             timestamp: Math.floor((c.time || c.timestamp) / 1000),
             open: c.open || c.o || 0,
             high: c.high || c.h || 0,
@@ -126,13 +126,16 @@ export class PocketOptionBrowserClient {
             close: c.close || c.c || 0,
             volume: c.volume || c.v || 0,
           }));
+          if (extracted.length >= MIN_CANDLES) {
+            console.log(`📊 Found OTC chart data with ${extracted.length} candles`);
+            return extracted;
+          }
         }
 
         // Strategy 2: TradingView chart embedded data
         const tvData = (window as any).__INITIAL_STATE__?.data?.quotes;
-        if (tvData && Array.isArray(tvData)) {
-          console.log(`📊 Found TradingView data with ${tvData.length} candles`);
-          return tvData.slice(-50).map((c: any) => ({
+        if (tvData && Array.isArray(tvData) && tvData.length >= MIN_CANDLES) {
+          const extracted = tvData.slice(-50).map((c: any) => ({
             timestamp: Math.floor(c.time / 1000),
             open: c.o,
             high: c.h,
@@ -140,13 +143,20 @@ export class PocketOptionBrowserClient {
             close: c.c,
             volume: c.v || 0,
           }));
+          if (extracted.length >= MIN_CANDLES) {
+            console.log(`📊 Found TradingView data with ${extracted.length} candles`);
+            return extracted;
+          }
         }
 
-        // Strategy 3: Canvas-based chart (lookfor chart rendering state)
+        // Strategy 3: Canvas-based chart (look for chart rendering state)
         const canvasCharts = (window as any).chartData || (window as any).__chartState__;
-        if (canvasCharts?.candles && Array.isArray(canvasCharts.candles)) {
-          console.log(`📊 Found canvas chart data with ${canvasCharts.candles.length} candles`);
-          return canvasCharts.candles.slice(-50);
+        if (canvasCharts?.candles && Array.isArray(canvasCharts.candles) && canvasCharts.candles.length >= MIN_CANDLES) {
+          const extracted = canvasCharts.candles.slice(-50);
+          if (extracted.length >= MIN_CANDLES) {
+            console.log(`📊 Found canvas chart data with ${extracted.length} candles`);
+            return extracted;
+          }
         }
 
         // Strategy 4: Extract from visible price text elements (last resort)
@@ -159,7 +169,7 @@ export class PocketOptionBrowserClient {
           .filter((p) => p > 0)
           .slice(-50);
 
-        if (priceTexts.length >= 26) {
+        if (priceTexts.length >= MIN_CANDLES) {
           console.log(`📊 Extracted ${priceTexts.length} prices from DOM`);
           return priceTexts.map((price, i) => ({
             timestamp: Math.floor((Date.now() - (50 - i) * 5 * 60 * 1000) / 1000),
@@ -171,7 +181,7 @@ export class PocketOptionBrowserClient {
           }));
         }
 
-        console.log(`⚠️ No OTC chart data found in page`);
+        console.log(`⚠️ No OTC chart data found in page with ${MIN_CANDLES}+ candles`);
         return [];
       }, symbol);
 
