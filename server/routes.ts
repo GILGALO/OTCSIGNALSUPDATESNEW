@@ -97,8 +97,16 @@ export async function registerRoutes(
       const currentPrice = candles[candles.length - 1].close;
       const { type, confidence } = generateSignalFromTechnicals(metrics, currentPrice);
 
-      if (type === "WAIT") {
-        return res.json({ signal: null, message: "No strong signal detected" });
+      // Minimum accuracy threshold - no signals below 75% confidence
+      const MINIMUM_CONFIDENCE_THRESHOLD = 75;
+      
+      if (type === "WAIT" || confidence < MINIMUM_CONFIDENCE_THRESHOLD) {
+        return res.json({ 
+          signal: null, 
+          message: `No strong signal detected (confidence: ${confidence}%, minimum required: ${MINIMUM_CONFIDENCE_THRESHOLD}%)`,
+          confidence,
+          minimumRequired: MINIMUM_CONFIDENCE_THRESHOLD
+        });
       }
 
       // Calculate entry, SL, TP

@@ -260,7 +260,8 @@ export function generateSignalFromTechnicals(metrics: TechnicalMetrics, currentP
   const confidence = Math.min(100, Math.abs(normalizedScore / 2) + 50);
   
   let type: 'CALL' | 'PUT' | 'WAIT' = 'WAIT';
-  if (confidence > 60) {
+  // Only generate signals with confidence > 75 for improved accuracy
+  if (confidence > 75) {
     type = score > 0 ? 'CALL' : 'PUT';
   }
   

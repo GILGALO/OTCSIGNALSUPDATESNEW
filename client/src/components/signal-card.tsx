@@ -115,7 +115,9 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
           setLastSignalSent(format(new Date(), 'HH:mm:ss'));
         }
       } else {
-        setError('No strong signal detected');
+        const minRequired = data.minimumRequired || 75;
+        const confidence = data.confidence || 0;
+        setError(`No strong signal detected (${confidence}% < ${minRequired}% required)`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error generating signal');
