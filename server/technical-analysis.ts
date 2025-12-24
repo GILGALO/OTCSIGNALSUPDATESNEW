@@ -202,101 +202,57 @@ export function analyzeCandles(candles: Candle[]): TechnicalMetrics {
   };
 }
 
-// Generate signal based on technicals - IMPROVED ANALYSIS
+// Generate signal based on technicals - HIGH ACCURACY CONSENSUS APPROACH
 export function generateSignalFromTechnicals(metrics: TechnicalMetrics, currentPrice: number): { type: 'CALL' | 'PUT' | 'WAIT'; confidence: number } {
-  let bullishSignals = 0;
-  let bearishSignals = 0;
-  let totalSignals = 0;
+  let bullishCount = 0;
+  let bearishCount = 0;
 
-  // 1. RSI Analysis - Momentum indicator (weight: 20%)
-  totalSignals++;
-  if (metrics.rsi > 70) {
-    bearishSignals++; // Overbought
-  } else if (metrics.rsi < 30) {
-    bullishSignals++; // Oversold
-  } else if (metrics.rsi > 50) {
-    bullishSignals += 0.5; // Moderate bullish
-  } else if (metrics.rsi < 50) {
-    bearishSignals += 0.5; // Moderate bearish
+  // 1. MACD - Most reliable trend indicator
+  if (metrics.macdHistogram > 0 && metrics.macdLine > metrics.macdSignal) {
+    bullishCount++; // Strong bullish
+  } else if (metrics.macdHistogram < 0 && metrics.macdLine < metrics.macdSignal) {
+    bearishCount++; // Strong bearish
   }
 
-  // 2. MACD Analysis - Trend momentum (weight: 25%)
-  totalSignals++;
-  if (metrics.macdHistogram > 0) {
-    bullishSignals++; // MACD bullish
-    if (metrics.macdLine > metrics.macdSignal) {
-      bullishSignals += 0.5; // Extra strength if MACD above signal
-    }
-  } else {
-    bearishSignals++; // MACD bearish
-    if (metrics.macdLine < metrics.macdSignal) {
-      bearishSignals += 0.5; // Extra strength if MACD below signal
-    }
-  }
-
-  // 3. Moving Average Analysis - Trend direction (weight: 20%)
-  totalSignals++;
-  const bullishMA = currentPrice > metrics.sma20 && metrics.sma20 > metrics.sma50;
-  const bearishMA = currentPrice < metrics.sma20 && metrics.sma20 < metrics.sma50;
+  // 2. Moving Averages - Trend confirmation
+  const bullishTrend = currentPrice > metrics.sma20 && metrics.sma20 > metrics.sma50;
+  const bearishTrend = currentPrice < metrics.sma20 && metrics.sma20 < metrics.sma50;
   
-  if (bullishMA) {
-    bullishSignals++;
-  } else if (bearishMA) {
-    bearishSignals++;
-  } else if (currentPrice > metrics.sma20) {
-    bullishSignals += 0.5;
-  } else {
-    bearishSignals += 0.5;
+  if (bullishTrend) {
+    bullishCount++;
+  } else if (bearishTrend) {
+    bearishCount++;
   }
 
-  // 4. Stochastic Analysis - Overbought/Oversold (weight: 15%)
-  totalSignals++;
-  if (metrics.stochasticK > 80) {
-    bearishSignals++; // Overbought
-  } else if (metrics.stochasticK < 20) {
-    bullishSignals++; // Oversold
-  } else if (metrics.stochasticK > metrics.stochasticD) {
-    bullishSignals += 0.7; // K above D = bullish
-  } else if (metrics.stochasticK < metrics.stochasticD) {
-    bearishSignals += 0.7; // K below D = bearish
+  // 3. RSI - Momentum confirmation (must not be extreme)
+  if (metrics.rsi > 50 && metrics.rsi < 70) {
+    bullishCount += 0.5; // Valid bullish momentum
+  } else if (metrics.rsi < 50 && metrics.rsi > 30) {
+    bearishCount += 0.5; // Valid bearish momentum
   }
 
-  // 5. ADX Analysis - Trend strength (weight: 20%)
-  totalSignals++;
-  if (metrics.adx > 50) {
-    // Very strong trend - add weight to the direction
-    if (metrics.trend === 'BULLISH') {
-      bullishSignals += 1.5;
-    } else if (metrics.trend === 'BEARISH') {
-      bearishSignals += 1.5;
-    }
-  } else if (metrics.adx > 30) {
-    // Strong trend
-    if (metrics.trend === 'BULLISH') {
-      bullishSignals += 1;
-    } else if (metrics.trend === 'BEARISH') {
-      bearishSignals += 1;
-    }
-  } else if (metrics.adx > 20) {
-    // Moderate trend
-    if (metrics.trend === 'BULLISH') {
-      bullishSignals += 0.5;
-    } else if (metrics.trend === 'BEARISH') {
-      bearishSignals += 0.5;
-    }
+  // 4. Trend + Momentum alignment (most important for accuracy)
+  if (metrics.trend === 'BULLISH' && metrics.momentum === 'STRONG' && metrics.adx > 25) {
+    bullishCount++;
+  } else if (metrics.trend === 'BEARISH' && metrics.momentum === 'STRONG' && metrics.adx > 25) {
+    bearishCount++;
   }
-
-  // Calculate final confidence
-  const totalWeight = bullishSignals + bearishSignals;
-  const bullishPercentage = totalWeight > 0 ? (bullishSignals / totalWeight) * 100 : 50;
-  const confidence = Math.round(Math.max(bullishPercentage, 100 - bullishPercentage));
 
   let type: 'CALL' | 'PUT' | 'WAIT' = 'WAIT';
+  let confidence = 0;
+
+  // Only generate signals with strong multi-indicator agreement
+  const totalSignals = bullishCount + bearishCount;
   
-  // Generate signal if confidence is reasonable (> 65%)
-  if (confidence > 65) {
-    type = bullishSignals > bearishSignals ? 'CALL' : 'PUT';
+  if (bullishCount > bearishCount && bullishCount >= 2.5) {
+    // Strong bullish agreement
+    type = 'CALL';
+    confidence = Math.min(90, 60 + (bullishCount * 10));
+  } else if (bearishCount > bullishCount && bearishCount >= 2.5) {
+    // Strong bearish agreement
+    type = 'PUT';
+    confidence = Math.min(90, 60 + (bearishCount * 10));
   }
 
-  return { type, confidence };
+  return { type, confidence: Math.round(confidence) };
 }

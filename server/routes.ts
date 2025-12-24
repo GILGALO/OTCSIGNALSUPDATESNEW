@@ -97,8 +97,8 @@ export async function registerRoutes(
       const currentPrice = candles[candles.length - 1].close;
       const { type, confidence } = generateSignalFromTechnicals(metrics, currentPrice);
 
-      // Minimum accuracy threshold for high-quality signals
-      const MINIMUM_CONFIDENCE_THRESHOLD = 65;
+      // Minimum accuracy threshold for HIGH WIN RATE signals
+      const MINIMUM_CONFIDENCE_THRESHOLD = 70;
       
       if (type === "WAIT") {
         return res.json({ 
@@ -112,7 +112,7 @@ export async function registerRoutes(
       if (confidence < MINIMUM_CONFIDENCE_THRESHOLD) {
         return res.json({ 
           signal: null, 
-          message: `Signal confidence too low (${confidence}% < ${MINIMUM_CONFIDENCE_THRESHOLD}% required)`,
+          message: `Signal too weak (${confidence}% < ${MINIMUM_CONFIDENCE_THRESHOLD}% required) - waiting for stronger setup`,
           confidence,
           minimumRequired: MINIMUM_CONFIDENCE_THRESHOLD
         });
