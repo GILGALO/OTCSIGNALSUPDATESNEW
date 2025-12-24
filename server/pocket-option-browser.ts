@@ -27,13 +27,17 @@ export class PocketOptionBrowserClient {
       console.log('🌐 Launching headless browser for Pocket Option...');
       
       this.browser = await puppeteer.launch({
-        headless: true,
+        headless: 'new',
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
           '--disable-dev-shm-usage',
           '--disable-gpu',
-          '--single-process',
+          '--disable-extensions',
+          '--disable-sync',
+          '--disable-plugins',
+          '--disable-default-apps',
+          '--no-first-run',
         ],
       });
 
