@@ -222,8 +222,9 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
 
             <div className="text-center space-y-0.5 lg:space-y-1 w-full">
               <h1 className={`text-3xl lg:text-5xl font-black tracking-tighter ${signal === 'CALL' ? 'text-primary' : 'text-destructive'}`}>
-                {signal}
+                {signal === 'CALL' ? 'BUY' : 'SELL'}
               </h1>
+              <p className="text-xs lg:text-sm font-mono text-muted-foreground">({signal})</p>
               <p className="text-sm lg:text-lg font-bold text-foreground">{selectedAsset}</p>
               <div className="flex items-center justify-center gap-2 text-xs lg:text-sm font-mono text-muted-foreground">
                 <Timer className="w-3 h-3" />

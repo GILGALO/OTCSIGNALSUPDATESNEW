@@ -73,7 +73,7 @@ export function RecentSignals({ selectedAsset = 'EUR/USD' }: { selectedAsset?: s
                 <TableCell className="font-bold text-xs">{signal.symbol}</TableCell>
                 <TableCell>
                   <span className={`text-xs font-bold px-2 py-0.5 rounded ${signal.type === 'CALL' ? 'bg-primary/20 text-primary' : 'bg-destructive/20 text-destructive'}`}>
-                    {signal.type}
+                    {signal.type === 'CALL' ? 'BUY' : 'SELL'} <span className="font-mono text-[10px]">({signal.type})</span>
                   </span>
                 </TableCell>
                 <TableCell>
