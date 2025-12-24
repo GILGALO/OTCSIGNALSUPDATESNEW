@@ -56,6 +56,7 @@ export async function registerRoutes(
   app.post("/api/generate-signal", async (req, res) => {
     try {
       const { symbol, ssid, source, telegramToken, channelId } = generateSignalSchema.parse(req.body);
+      console.log(`🔍 [SIGNAL] Starting scan for ${symbol}`);
 
       // M5 CYCLE DEBOUNCING: Only one signal per M5 candle cycle
       const lastSignal = lastSignalTime.get(symbol);
@@ -115,6 +116,7 @@ export async function registerRoutes(
       const metrics = analyzeCandles(analysisCandles);
       const currentPrice = candles[candles.length - 1].close;
       const { type, confidence } = generateSignalFromTechnicals(metrics, currentPrice);
+      console.log(`📊 [SIGNAL] ${symbol}: type=${type}, confidence=${confidence}%, trend=${metrics.trend}, adx=${metrics.adx.toFixed(1)}`);
 
       // Balanced accuracy threshold - enough to be profitable, not so strict we miss opportunities
       const MINIMUM_CONFIDENCE_THRESHOLD = 60;

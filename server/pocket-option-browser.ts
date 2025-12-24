@@ -153,16 +153,24 @@ export class PocketOptionBrowserClient {
     const candles: CandleData[] = [];
     let currentPrice = basePrice;
     const now = Date.now();
+    
+    // Create realistic trending candles (alternating bullish/bearish patterns)
+    const trend = Math.random() > 0.5 ? 1 : -1; // Bullish or bearish
+    const trendStrength = 0.0008 * trend; // Clear directional bias
 
     for (let i = count; i > 0; i--) {
       const timestamp = Math.floor((now - i * 5 * 60 * 1000) / 1000);
-      const volatility = 0.0005;
-      const randomChange = (Math.random() - 0.5) * volatility * currentPrice;
+      const volatility = 0.0004;
+      
+      // Directional movement + random volatility
+      const directionMove = trendStrength * currentPrice;
+      const randomNoise = (Math.random() - 0.5) * volatility * currentPrice;
+      const change = directionMove + randomNoise;
 
       const open = currentPrice;
-      const close = open + randomChange;
-      const high = Math.max(open, close) + Math.abs(randomChange) * 0.5;
-      const low = Math.min(open, close) - Math.abs(randomChange) * 0.3;
+      const close = open + change;
+      const high = Math.max(open, close) + Math.abs(change) * 0.6;
+      const low = Math.min(open, close) - Math.abs(change) * 0.4;
 
       candles.push({
         timestamp,
@@ -172,7 +180,7 @@ export class PocketOptionBrowserClient {
         close: parseFloat(close.toFixed(5)),
         volume: Math.floor(Math.random() * 1000 + 500),
       });
-
+      
       currentPrice = close;
     }
 
