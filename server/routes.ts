@@ -6,6 +6,7 @@ import { createTelegramService } from "./telegram";
 import { analyzeCandles, generateSignalFromTechnicals } from "./technical-analysis";
 import { addMinutes, addSeconds } from "date-fns";
 import { z } from "zod";
+import { scheduleSignalSend, getSignalSendTime } from "./signal-scheduler";
 
 // Request validation schemas
 const generateSignalSchema = z.object({
@@ -131,11 +132,12 @@ export async function registerRoutes(
         technicals: JSON.stringify(metrics),
       });
 
-      // Send to Telegram if credentials provided
-      let telegramResult: { success: boolean; messageId?: string; error?: string } = { success: false };
+      // Schedule Telegram send for 2 minutes before next M5 candle
+      let telegramResult: { success: boolean; messageId?: string; error?: string; scheduled?: boolean; scheduledSendTime?: string } = { success: false };
+      let scheduledSendTime: Date | null = null;
+
       if (telegramToken && channelId) {
-        const telegram = createTelegramService(telegramToken, channelId);
-        telegramResult = await telegram.sendSignal({
+        const signalPayload = {
           symbol,
           signalType: type,
           confidence,
@@ -157,11 +159,37 @@ export async function registerRoutes(
             stochasticD: metrics.stochasticD,
             adx: metrics.adx,
           },
-        });
+        };
 
-        if (telegramResult.success && telegramResult.messageId) {
-          await storage.updateSignalTelegram(signal.id, telegramResult.messageId);
-        }
+        // Schedule the telegram send callback
+        const sendCallback = async (signalId: string, sendTime: Date) => {
+          try {
+            const telegram = createTelegramService(telegramToken, channelId);
+            const result = await telegram.sendSignal(signalPayload);
+            if (result.success && result.messageId) {
+              await storage.updateSignalTelegram(signalId, result.messageId);
+              console.log(`[TELEGRAM] Signal ${signalId} sent successfully at ${sendTime.toISOString()}`);
+            }
+          } catch (error) {
+            console.error(`[TELEGRAM ERROR] Failed to send signal ${signalId}:`, error);
+          }
+        };
+
+        // Schedule the signal
+        const { sendTime, isImmediate } = scheduleSignalSend(
+          signal.id,
+          signalPayload,
+          telegramToken,
+          channelId,
+          sendCallback
+        );
+
+        scheduledSendTime = sendTime;
+        telegramResult = {
+          success: true,
+          scheduled: !isImmediate,
+          scheduledSendTime: sendTime.toISOString(),
+        };
       }
 
       res.json({
@@ -175,6 +203,7 @@ export async function registerRoutes(
           entryTime,
           expiryTime,
           technicals: metrics,
+          scheduledSendTime,
         },
         telegram: telegramResult,
       });
