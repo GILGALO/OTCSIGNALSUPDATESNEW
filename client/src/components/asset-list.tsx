@@ -11,6 +11,18 @@ const ASSETS = [
   { pair: 'USD/CHF', payout: '78%', status: 'up' },
   { pair: 'NZD/USD', payout: '80%', status: 'down' },
   { pair: 'EUR/GBP', payout: '85%', status: 'up' },
+  { pair: 'GBP/JPY', payout: '87%', status: 'up' },
+  { pair: 'CAD/JPY', payout: '83%', status: 'down' },
+  { pair: 'AUD/USD', payout: '89%', status: 'up' },
+  { pair: 'CAD/USD', payout: '81%', status: 'down' },
+  { pair: 'NZD/JPY', payout: '84%', status: 'up' },
+  { pair: 'USD/CAD', payout: '86%', status: 'up' },
+  { pair: 'GBP/CHF', payout: '79%', status: 'down' },
+  { pair: 'EUR/CAD', payout: '88%', status: 'up' },
+  { pair: 'AUD/JPY', payout: '82%', status: 'down' },
+  { pair: 'EUR/AUD', payout: '87%', status: 'up' },
+  { pair: 'GBP/CAD', payout: '85%', status: 'down' },
+  { pair: 'AUD/CHF', payout: '80%', status: 'up' },
 ];
 
 export function AssetList({ onSelect, selected }: { onSelect: (pair: string) => void, selected: string }) {
