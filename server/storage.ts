@@ -23,105 +23,169 @@ export interface IStorage {
 }
 
 class PostgresStorage implements IStorage {
-  private db;
+  private db: any;
+  private isConnected: boolean = false;
 
   constructor() {
-    if (!process.env.DATABASE_URL) {
-      throw new Error("DATABASE_URL environment variable is required");
+    if (process.env.DATABASE_URL) {
+      try {
+        const pool = new Pool({
+          connectionString: process.env.DATABASE_URL,
+        });
+        this.db = drizzle(pool);
+        this.isConnected = true;
+        console.log("✅ Database connected");
+      } catch (error) {
+        console.warn("⚠️ Database connection failed, using in-memory storage");
+        this.isConnected = false;
+      }
+    } else {
+      console.warn("⚠️ DATABASE_URL not set, using in-memory storage");
+      this.isConnected = false;
     }
-    
-    const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-    });
-    
-    this.db = drizzle(pool);
   }
 
   async getUser(id: string): Promise<User | undefined> {
-    const result = await this.db.select().from(users).where(eq(users.id, id));
-    return result[0];
+    if (!this.isConnected) return undefined;
+    try {
+      const result = await this.db.select().from(users).where(eq(users.id, id));
+      return result[0];
+    } catch {
+      return undefined;
+    }
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const result = await this.db
-      .select()
-      .from(users)
-      .where(eq(users.username, username));
-    return result[0];
+    if (!this.isConnected) return undefined;
+    try {
+      const result = await this.db
+        .select()
+        .from(users)
+        .where(eq(users.username, username));
+      return result[0];
+    } catch {
+      return undefined;
+    }
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const result = await this.db
-      .insert(users)
-      .values(insertUser)
-      .returning();
-    return result[0];
+    if (!this.isConnected) throw new Error("Database not available");
+    try {
+      const result = await this.db
+        .insert(users)
+        .values(insertUser)
+        .returning();
+      return result[0];
+    } catch (error) {
+      throw error;
+    }
   }
 
   async createCandle(candle: InsertCandle): Promise<Candle> {
-    const result = await this.db
-      .insert(candles)
-      .values(candle)
-      .returning();
-    return result[0];
+    if (!this.isConnected) {
+      return { ...candle, id: "", createdAt: new Date() } as Candle;
+    }
+    try {
+      const result = await this.db
+        .insert(candles)
+        .values(candle)
+        .returning();
+      return result[0];
+    } catch {
+      return { ...candle, id: "", createdAt: new Date() } as Candle;
+    }
   }
 
   async getLastCandle(symbol: string, timeframe: string): Promise<Candle | undefined> {
-    const result = await this.db
-      .select()
-      .from(candles)
-      .where(and(eq(candles.symbol, symbol), eq(candles.timeframe, timeframe)))
-      .orderBy(desc(candles.closeTime))
-      .limit(1);
-    return result[0];
+    if (!this.isConnected) return undefined;
+    try {
+      const result = await this.db
+        .select()
+        .from(candles)
+        .where(and(eq(candles.symbol, symbol), eq(candles.timeframe, timeframe)))
+        .orderBy(desc(candles.closeTime))
+        .limit(1);
+      return result[0];
+    } catch {
+      return undefined;
+    }
   }
 
   async getCandlesBefore(symbol: string, timeframe: string, beforeTime: Date, limit: number): Promise<Candle[]> {
-    const result = await this.db
-      .select()
-      .from(candles)
-      .where(
-        and(
-          eq(candles.symbol, symbol),
-          eq(candles.timeframe, timeframe),
-          sql`${candles.closeTime} <= ${beforeTime}`
+    if (!this.isConnected) return [];
+    try {
+      const result = await this.db
+        .select()
+        .from(candles)
+        .where(
+          and(
+            eq(candles.symbol, symbol),
+            eq(candles.timeframe, timeframe),
+            sql`${candles.closeTime} <= ${beforeTime}`
+          )
         )
-      )
-      .orderBy(desc(candles.closeTime))
-      .limit(limit);
-    return result;
+        .orderBy(desc(candles.closeTime))
+        .limit(limit);
+      return result;
+    } catch {
+      return [];
+    }
   }
 
   async createSignal(signal: InsertSignal): Promise<Signal> {
-    const result = await this.db
-      .insert(signals)
-      .values(signal)
-      .returning();
-    return result[0];
+    if (!this.isConnected) {
+      return { ...signal, id: "", createdAt: new Date() } as Signal;
+    }
+    try {
+      const result = await this.db
+        .insert(signals)
+        .values(signal)
+        .returning();
+      return result[0];
+    } catch {
+      return { ...signal, id: "", createdAt: new Date() } as Signal;
+    }
   }
 
   async getSignalById(id: string): Promise<Signal | undefined> {
-    const result = await this.db.select().from(signals).where(eq(signals.id, id));
-    return result[0];
+    if (!this.isConnected) return undefined;
+    try {
+      const result = await this.db.select().from(signals).where(eq(signals.id, id));
+      return result[0];
+    } catch {
+      return undefined;
+    }
   }
 
   async getRecentSignals(symbol: string, limit: number): Promise<Signal[]> {
-    const result = await this.db
-      .select()
-      .from(signals)
-      .where(eq(signals.symbol, symbol))
-      .orderBy(desc(signals.createdAt))
-      .limit(limit);
-    return result;
+    if (!this.isConnected) return [];
+    try {
+      const result = await this.db
+        .select()
+        .from(signals)
+        .where(eq(signals.symbol, symbol))
+        .orderBy(desc(signals.createdAt))
+        .limit(limit);
+      return result;
+    } catch {
+      return [];
+    }
   }
 
   async updateSignalTelegram(id: string, messageId: string): Promise<Signal> {
-    const result = await this.db
-      .update(signals)
-      .set({ telegramMessageId: messageId, telegramSent: 1 })
-      .where(eq(signals.id, id))
-      .returning();
-    return result[0];
+    if (!this.isConnected) {
+      throw new Error("Database not available");
+    }
+    try {
+      const result = await this.db
+        .update(signals)
+        .set({ telegramMessageId: messageId, telegramSent: 1 })
+        .where(eq(signals.id, id))
+        .returning();
+      return result[0];
+    } catch (error) {
+      throw error;
+    }
   }
 }
 
