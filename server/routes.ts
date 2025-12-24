@@ -150,8 +150,8 @@ export async function registerRoutes(
           entryPrice,
           stopLoss,
           takeProfit,
-          startTime: analysisStartTime,
-          endTime: analysisEndTime,
+          startTime: entryTime,
+          endTime: expiryTime,
           technicals: {
             rsi: metrics.rsi,
             trend: metrics.trend,
