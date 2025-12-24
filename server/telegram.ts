@@ -110,30 +110,44 @@ ${analysisText}`;
     try {
       const message = this.formatSignalMessage(options);
       
-      const response = await fetch(`${this.baseUrl}/bot${this.botToken}/sendMessage`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chat_id: this.channelId,
-          text: message,
-          parse_mode: 'HTML',
-        }),
-      });
+      // Add 30-second timeout to Telegram API calls
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
 
-      const data = await response.json();
+      try {
+        const response = await fetch(`${this.baseUrl}/bot${this.botToken}/sendMessage`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chat_id: this.channelId,
+            text: message,
+            parse_mode: 'HTML',
+          }),
+          signal: controller.signal,
+        });
 
-      if (data.ok) {
-        return {
-          success: true,
-          messageId: String(data.result.message_id),
-        };
-      } else {
-        return {
-          success: false,
-          error: data.description || 'Unknown error',
-        };
+        clearTimeout(timeout);
+        const data = await response.json();
+
+        if (data.ok) {
+          return {
+            success: true,
+            messageId: String(data.result.message_id),
+          };
+        } else {
+          return {
+            success: false,
+            error: data.description || 'Unknown error',
+          };
+        }
+      } catch (fetchError) {
+        clearTimeout(timeout);
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+          throw new Error('Telegram API timeout (30s)');
+        }
+        throw fetchError;
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
