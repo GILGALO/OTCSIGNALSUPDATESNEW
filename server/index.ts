@@ -81,8 +81,8 @@ app.use((req, res, next) => {
     await setupVite(httpServer, app);
   }
 
-  // --- FIXED: Use Render's PORT and bind to 0.0.0.0 ---
-  const PORT = parseInt(process.env.PORT || "10000", 10);
+  // Use PORT environment variable or default to 5000
+  const PORT = parseInt(process.env.PORT || "5000", 10);
   httpServer.listen(PORT, "0.0.0.0", () => {
     log(`Server running on port ${PORT}`);
   });
