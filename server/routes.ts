@@ -97,13 +97,22 @@ export async function registerRoutes(
       const currentPrice = candles[candles.length - 1].close;
       const { type, confidence } = generateSignalFromTechnicals(metrics, currentPrice);
 
-      // Minimum accuracy threshold - no signals below 75% confidence
-      const MINIMUM_CONFIDENCE_THRESHOLD = 75;
+      // Minimum accuracy threshold for high-quality signals
+      const MINIMUM_CONFIDENCE_THRESHOLD = 65;
       
-      if (type === "WAIT" || confidence < MINIMUM_CONFIDENCE_THRESHOLD) {
+      if (type === "WAIT") {
         return res.json({ 
           signal: null, 
-          message: `No strong signal detected (confidence: ${confidence}%, minimum required: ${MINIMUM_CONFIDENCE_THRESHOLD}%)`,
+          message: "No clear directional signal detected. Market is neutral.",
+          confidence,
+          minimumRequired: MINIMUM_CONFIDENCE_THRESHOLD
+        });
+      }
+      
+      if (confidence < MINIMUM_CONFIDENCE_THRESHOLD) {
+        return res.json({ 
+          signal: null, 
+          message: `Signal confidence too low (${confidence}% < ${MINIMUM_CONFIDENCE_THRESHOLD}% required)`,
           confidence,
           minimumRequired: MINIMUM_CONFIDENCE_THRESHOLD
         });

@@ -202,68 +202,101 @@ export function analyzeCandles(candles: Candle[]): TechnicalMetrics {
   };
 }
 
-// Generate signal based on technicals
+// Generate signal based on technicals - IMPROVED ANALYSIS
 export function generateSignalFromTechnicals(metrics: TechnicalMetrics, currentPrice: number): { type: 'CALL' | 'PUT' | 'WAIT'; confidence: number } {
-  let score = 0;
-  let maxScore = 0;
-  
-  // RSI analysis
+  let bullishSignals = 0;
+  let bearishSignals = 0;
+  let totalSignals = 0;
+
+  // 1. RSI Analysis - Momentum indicator (weight: 20%)
+  totalSignals++;
   if (metrics.rsi > 70) {
-    score -= 20; // Overbought, bearish
+    bearishSignals++; // Overbought
   } else if (metrics.rsi < 30) {
-    score += 20; // Oversold, bullish
+    bullishSignals++; // Oversold
+  } else if (metrics.rsi > 50) {
+    bullishSignals += 0.5; // Moderate bullish
+  } else if (metrics.rsi < 50) {
+    bearishSignals += 0.5; // Moderate bearish
   }
-  maxScore += 20;
-  
-  // MACD analysis
+
+  // 2. MACD Analysis - Trend momentum (weight: 25%)
+  totalSignals++;
   if (metrics.macdHistogram > 0) {
-    score += 15;
+    bullishSignals++; // MACD bullish
+    if (metrics.macdLine > metrics.macdSignal) {
+      bullishSignals += 0.5; // Extra strength if MACD above signal
+    }
   } else {
-    score -= 15;
-  }
-  maxScore += 15;
-  
-  // Trend analysis
-  if (metrics.trend === 'BULLISH') {
-    score += 25;
-  } else if (metrics.trend === 'BEARISH') {
-    score -= 25;
-  }
-  maxScore += 25;
-  
-  // Momentum (applies to current trend direction)
-  if (metrics.trend === 'BULLISH') {
-    if (metrics.momentum === 'STRONG') {
-      score += 20;
-    } else if (metrics.momentum === 'MODERATE') {
-      score += 10;
-    }
-  } else if (metrics.trend === 'BEARISH') {
-    if (metrics.momentum === 'STRONG') {
-      score -= 20;
-    } else if (metrics.momentum === 'MODERATE') {
-      score -= 10;
+    bearishSignals++; // MACD bearish
+    if (metrics.macdLine < metrics.macdSignal) {
+      bearishSignals += 0.5; // Extra strength if MACD below signal
     }
   }
-  maxScore += 20;
+
+  // 3. Moving Average Analysis - Trend direction (weight: 20%)
+  totalSignals++;
+  const bullishMA = currentPrice > metrics.sma20 && metrics.sma20 > metrics.sma50;
+  const bearishMA = currentPrice < metrics.sma20 && metrics.sma20 < metrics.sma50;
   
-  // Price position
-  if (currentPrice > metrics.sma20 && currentPrice > metrics.sma50) {
-    score += 10;
-  } else if (currentPrice < metrics.sma20 && currentPrice < metrics.sma50) {
-    score -= 10;
+  if (bullishMA) {
+    bullishSignals++;
+  } else if (bearishMA) {
+    bearishSignals++;
+  } else if (currentPrice > metrics.sma20) {
+    bullishSignals += 0.5;
+  } else {
+    bearishSignals += 0.5;
   }
-  maxScore += 10;
-  
-  const normalizedScore = (score / maxScore) * 100;
-  // Confidence is based on absolute strength, not direction
-  const confidence = Math.min(100, Math.abs(normalizedScore / 2) + 50);
-  
+
+  // 4. Stochastic Analysis - Overbought/Oversold (weight: 15%)
+  totalSignals++;
+  if (metrics.stochasticK > 80) {
+    bearishSignals++; // Overbought
+  } else if (metrics.stochasticK < 20) {
+    bullishSignals++; // Oversold
+  } else if (metrics.stochasticK > metrics.stochasticD) {
+    bullishSignals += 0.7; // K above D = bullish
+  } else if (metrics.stochasticK < metrics.stochasticD) {
+    bearishSignals += 0.7; // K below D = bearish
+  }
+
+  // 5. ADX Analysis - Trend strength (weight: 20%)
+  totalSignals++;
+  if (metrics.adx > 50) {
+    // Very strong trend - add weight to the direction
+    if (metrics.trend === 'BULLISH') {
+      bullishSignals += 1.5;
+    } else if (metrics.trend === 'BEARISH') {
+      bearishSignals += 1.5;
+    }
+  } else if (metrics.adx > 30) {
+    // Strong trend
+    if (metrics.trend === 'BULLISH') {
+      bullishSignals += 1;
+    } else if (metrics.trend === 'BEARISH') {
+      bearishSignals += 1;
+    }
+  } else if (metrics.adx > 20) {
+    // Moderate trend
+    if (metrics.trend === 'BULLISH') {
+      bullishSignals += 0.5;
+    } else if (metrics.trend === 'BEARISH') {
+      bearishSignals += 0.5;
+    }
+  }
+
+  // Calculate final confidence
+  const totalWeight = bullishSignals + bearishSignals;
+  const bullishPercentage = totalWeight > 0 ? (bullishSignals / totalWeight) * 100 : 50;
+  const confidence = Math.round(Math.max(bullishPercentage, 100 - bullishPercentage));
+
   let type: 'CALL' | 'PUT' | 'WAIT' = 'WAIT';
-  // Only generate signals with confidence > 75 for improved accuracy
-  if (confidence > 75) {
-    type = score > 0 ? 'CALL' : 'PUT';
-  }
   
-  return { type, confidence: Math.round(confidence) };
+  // Generate signal if confidence is reasonable (> 65%)
+  if (confidence > 65) {
+    type = bullishSignals > bearishSignals ? 'CALL' : 'PUT';
+  }
+
+  return { type, confidence };
 }
