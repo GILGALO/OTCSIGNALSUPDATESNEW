@@ -9,7 +9,6 @@ channel = "stable-25_05"
 deploymentTarget = "autoscale"
 build = ["npm", "run", "build"]
 publicDir = "dist/public"
-run = ["node", "./dist/index.cjs"]
 
 [[ports]]
 localPort = 5000
