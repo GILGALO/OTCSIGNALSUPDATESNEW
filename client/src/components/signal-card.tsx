@@ -24,6 +24,13 @@ interface GeneratedSignal {
   technicals: any;
 }
 
+const ASSETS_FOR_AUTO_SCAN = [
+  'EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/CAD', 'EUR/JPY',
+  'USD/CHF', 'NZD/USD', 'EUR/GBP', 'GBP/JPY', 'CAD/JPY',
+  'AUD/USD', 'CAD/USD', 'NZD/JPY', 'USD/CAD', 'GBP/CHF',
+  'EUR/CAD', 'AUD/JPY', 'EUR/AUD', 'GBP/CAD', 'AUD/CHF',
+];
+
 export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD' }: SignalCardProps) {
   const [signal, setSignal] = useState<'CALL' | 'PUT' | 'WAIT'>('WAIT');
   const [confidence, setConfidence] = useState(0);
@@ -34,6 +41,7 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
   const [lastSignalSent, setLastSignalSent] = useState<string | null>(null);
   const [signalData, setSignalData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [scannedAsset, setScannedAsset] = useState<string>('');
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -69,12 +77,11 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
     setScanProgress(0);
     setError(null);
     setLastSignalSent(null);
-    
-    for(let i = 0; i <= 100; i+=2) {
-      setScanProgress(i);
-      await new Promise(r => setTimeout(r, 40));
-    }
+    setScannedAsset('');
 
+    // In AUTO mode, scan ALL assets; in MANUAL mode, scan only selected asset
+    const assetsToScan = mode === 'AUTO' ? ASSETS_FOR_AUTO_SCAN : [selectedAsset];
+    
     try {
       const ssid = localStorage.getItem('pocket_option_ssid');
       if (!ssid) {
@@ -86,39 +93,44 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
       const telegramToken = localStorage.getItem('telegram_bot_token');
       const channelId = localStorage.getItem('telegram_channel_id');
 
-      const response = await fetch('/api/generate-signal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          symbol: selectedAsset,
-          ssid,
-          source: mode,
-          telegramToken: telegramToken || undefined,
-          channelId: channelId || undefined,
-        }),
-      });
+      // Scan each asset for a strong signal
+      for (let idx = 0; idx < assetsToScan.length; idx++) {
+        const asset = assetsToScan[idx];
+        const progressPercent = Math.floor((idx / assetsToScan.length) * 100);
+        setScanProgress(progressPercent);
 
-      const data = await response.json();
+        const response = await fetch('/api/generate-signal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            symbol: asset,
+            ssid,
+            source: mode,
+            telegramToken: telegramToken || undefined,
+            channelId: channelId || undefined,
+          }),
+        });
 
-      if (!response.ok) {
-        setError(data.error || 'Failed to generate signal');
-        setIsScanning(false);
-        return;
-      }
+        const data = await response.json();
 
-      if (data.signal && data.signal.type !== 'WAIT') {
-        setSignal(data.signal.type);
-        setConfidence(data.signal.confidence);
-        setSignalData(data.signal);
-        setExpiryTime(300);
-        if (data.telegram?.success) {
-          setLastSignalSent(format(new Date(), 'HH:mm:ss'));
+        // Check if we found a strong signal
+        if (data.signal && data.signal.type !== 'WAIT') {
+          setSignal(data.signal.type);
+          setConfidence(data.signal.confidence);
+          setSignalData(data.signal);
+          setScannedAsset(asset);
+          setExpiryTime(300);
+          setScanProgress(100);
+          if (data.telegram?.success) {
+            setLastSignalSent(format(new Date(), 'HH:mm:ss'));
+          }
+          return;
         }
-      } else {
-        const minRequired = data.minimumRequired || 75;
-        const confidence = data.confidence || 0;
-        setError(`No strong signal detected (${confidence}% < ${minRequired}% required)`);
       }
+
+      // No strong signal found in any asset
+      setScanProgress(100);
+      setError(`No strong signals detected across all ${assetsToScan.length} OTC pairs`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error generating signal');
     } finally {
@@ -227,7 +239,7 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
                 {signal === 'CALL' ? 'BUY' : 'SELL'}
               </h1>
               <p className="text-xs lg:text-sm font-mono text-muted-foreground">({signal})</p>
-              <p className="text-sm lg:text-lg font-bold text-foreground">{selectedAsset}</p>
+              <p className="text-sm lg:text-lg font-bold text-foreground">{scannedAsset || selectedAsset}</p>
               <div className="flex items-center justify-center gap-2 text-xs lg:text-sm font-mono text-muted-foreground">
                 <Timer className="w-3 h-3" />
                 <span>EXPIRES IN <span className="text-white font-bold">{formatTime(expiryTime)}</span></span>
