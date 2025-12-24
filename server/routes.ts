@@ -183,21 +183,35 @@ export async function registerRoutes(
           }
         };
 
-        // Schedule signal send (2 minutes before entry)
-        const { sendTime, isImmediate } = scheduleSignalSend(
-          signal.id,
-          signalPayload,
-          telegramToken,
-          channelId,
-          sendCallback
-        );
-
-        scheduledSendTime = sendTime;
-        telegramResult = {
-          success: true,
-          scheduled: !isImmediate,
-          scheduledSendTime: sendTime.toISOString(),
-        };
+        // Send signal IMMEDIATELY when generated, regardless of time to entry
+        try {
+          const telegram = createTelegramService(telegramToken, channelId);
+          console.log(`[TELEGRAM] Sending signal ${signal.id} IMMEDIATELY (generated just now)`);
+          const result = await telegram.sendSignal(signalPayload);
+          if (result.success && result.messageId) {
+            await storage.updateSignalTelegram(signal.id, result.messageId);
+            console.log(`[TELEGRAM] ✅ Signal ${signal.id} sent immediately (msg: ${result.messageId})`);
+            telegramResult = {
+              success: true,
+              messageId: result.messageId,
+              scheduled: false,
+            };
+          } else {
+            console.error(`[TELEGRAM] Signal ${signal.id} failed: ${result.error}`);
+            telegramResult = {
+              success: false,
+              error: result.error,
+            };
+          }
+        } catch (error) {
+          console.error(`[TELEGRAM] Exception sending signal ${signal.id}:`, error);
+          telegramResult = {
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+          };
+        }
+        
+        scheduledSendTime = new Date();
       }
 
       res.json({
