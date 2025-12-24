@@ -6,7 +6,7 @@ import { createTelegramService } from "./telegram";
 import { analyzeCandles, generateSignalFromTechnicals } from "./technical-analysis";
 import { addMinutes, addSeconds } from "date-fns";
 import { z } from "zod";
-import { scheduleSignalSend, getSignalSendTime } from "./signal-scheduler";
+import { scheduleSignalSend, getSignalSendTime, calculateM5CandleEntryTime } from "./signal-scheduler";
 
 // Request validation schemas
 const generateSignalSchema = z.object({
@@ -114,7 +114,11 @@ export async function registerRoutes(
       const now = new Date();
       const analysisStartTime = addMinutes(now, -10);
       const analysisEndTime = now;
-      const entryTime = addMinutes(now, 5);
+      
+      // Calculate entry time aligned to M5 candle with 2-minute preparation requirement
+      // Entry MUST be at exact open of a 5-minute candle
+      // MINIMUM 2 minutes between signal send and entry
+      const entryTime = calculateM5CandleEntryTime();
       const expiryTime = addMinutes(entryTime, 5);
 
       // Create signal

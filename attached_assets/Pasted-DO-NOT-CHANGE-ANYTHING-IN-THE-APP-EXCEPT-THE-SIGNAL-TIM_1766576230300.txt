@@ -1,0 +1,93 @@
+DO NOT CHANGE ANYTHING IN THE APP EXCEPT THE SIGNAL TIMING LOGIC.
+
+CONTEXT:
+- App is LIVE on Render
+- Real Pocket Option OTC market data is working
+- Signals, indicators, confidence, Telegram formatting, UI, database are ALL CORRECT
+- ONLY the timing is wrong
+
+PROBLEM:
+- Signals are being sent mid-candle
+- Entry times are not aligned to proper 5-minute OTC candles
+- Users do not get enough preparation time
+
+GOAL:
+- Fix signal timing to align PERFECTLY with Pocket Option OTC M5 candles
+- Ensure clean entries and proper preparation time
+
+STRICT RULES TO IMPLEMENT:
+
+1) TIMEFRAME
+- Signals are ONLY for M5 (5-minute) candles
+- Valid candle open times are:
+  HH:00, HH:05, HH:10, HH:15, HH:20, HH:25,
+  HH:30, HH:35, HH:40, HH:45, HH:50, HH:55
+
+2) NO MID-CANDLE ENTRIES (ABSOLUTE RULE)
+- NEVER allow a signal to start inside a running candle
+- Entry time MUST be the exact open of a 5-minute candle
+
+3) PREPARATION TIME (MANDATORY)
+- There MUST be at least 2 FULL MINUTES between:
+  signal_sent_time → entry_time
+- If time remaining to the next candle is LESS than 2 minutes:
+  → SKIP that candle
+  → Use the FOLLOWING 5-minute candle instead
+
+4) ENTRY TIME LOGIC
+- Get current broker/UTC time
+- Round UP to the NEXT 5-minute candle open
+- If (next_candle_time - now) < 2 minutes:
+    entry_time = next_next_5min_candle
+  ELSE:
+    entry_time = next_5min_candle
+
+5) EXPIRY / END TIME
+- End time MUST be:
+  end_time = entry_time + 5 minutes
+- No exceptions
+
+6) SIGNAL OUTPUT MUST SHOW:
+- Start Time = entry_time
+- End Time = end_time
+- These times must align exactly with OTC candles
+
+EXAMPLE (EXPECTED BEHAVIOR):
+
+Current time: 11:17
+
+WRONG (DO NOT DO THIS):
+Start Time: 11:17
+End Time: 11:27
+
+CORRECT:
+Start Time: 11:20
+End Time: 11:25
+
+ANOTHER EXAMPLE:
+Current time: 11:18:45
+Next candle: 11:20
+Time remaining < 2 minutes
+→ SKIP 11:20
+→ Use 11:25
+
+Start Time: 11:25
+End Time: 11:30
+
+IMPORTANT CONSTRAINTS:
+- DO NOT modify:
+  - Signal generation logic
+  - Technical indicators (RSI, MACD, EMA, SMA, etc.)
+  - Confidence calculation
+  - Telegram message format
+  - UI / frontend
+  - Database
+- ONLY adjust:
+  - Candle alignment logic
+  - Entry & expiry timing calculation
+
+RESULT:
+- Signals always start at clean M5 candle opens
+- Minimum 2-minute preparation time
+- No mid-candle entries
+- Perfect alignment with Pocket Option OTC trading

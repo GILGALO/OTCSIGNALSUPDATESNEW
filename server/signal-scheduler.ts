@@ -51,11 +51,38 @@ export function getNextM5CandleStartTime(): Date {
 }
 
 /**
- * Calculate send time: 2 minutes before next candle
+ * Calculate entry time aligned to M5 candle with 2-minute preparation requirement
+ * 
+ * Rules:
+ * 1. Entry time MUST be at exact open of a 5-minute candle
+ * 2. MINIMUM 2 FULL MINUTES between signal send and entry time
+ * 3. If time to next candle < 2 minutes: SKIP and use following candle
+ */
+export function calculateM5CandleEntryTime(): Date {
+  const now = new Date();
+  const nextCandleStart = getNextM5CandleStartTime();
+  
+  // Calculate time remaining until next candle
+  const timeUntilNextCandle = nextCandleStart.getTime() - now.getTime();
+  const minutesRemaining = timeUntilNextCandle / (1000 * 60);
+  
+  // If less than 2 minutes to next candle, skip it and use the following candle
+  if (minutesRemaining < 2) {
+    const skipCandle = new Date(nextCandleStart);
+    skipCandle.setMinutes(skipCandle.getMinutes() + 5);
+    return skipCandle;
+  }
+  
+  // Otherwise use the next candle
+  return nextCandleStart;
+}
+
+/**
+ * Calculate send time: 2 minutes before entry time
  */
 export function getSignalSendTime(): Date {
-  const nextCandleStart = getNextM5CandleStartTime();
-  const sendTime = new Date(nextCandleStart);
+  const entryTime = calculateM5CandleEntryTime();
+  const sendTime = new Date(entryTime);
   sendTime.setMinutes(sendTime.getMinutes() - 2);
   return sendTime;
 }
