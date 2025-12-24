@@ -32,6 +32,7 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [lastSignalSent, setLastSignalSent] = useState<string | null>(null);
+  const [signalData, setSignalData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -107,6 +108,7 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
       if (data.signal && data.signal.type !== 'WAIT') {
         setSignal(data.signal.type);
         setConfidence(data.signal.confidence);
+        setSignalData(data.signal);
         setExpiryTime(300);
         if (data.telegram?.success) {
           setLastSignalSent(format(new Date(), 'HH:mm:ss'));
@@ -207,44 +209,55 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
             )}
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-6 z-10 w-full animate-in zoom-in duration-300">
-            <div className={`relative flex items-center justify-center w-48 h-48 rounded-full border-8 ${signal === 'CALL' ? 'border-primary bg-primary/10 shadow-[0_0_60px_rgba(var(--primary),0.4)]' : 'border-destructive bg-destructive/10 shadow-[0_0_60px_rgba(var(--destructive),0.4)]'}`}>
+          <div className="flex flex-col items-center gap-4 z-10 w-full animate-in zoom-in duration-300">
+            <div className={`relative flex items-center justify-center w-40 h-40 rounded-full border-8 ${signal === 'CALL' ? 'border-primary bg-primary/10 shadow-[0_0_60px_rgba(var(--primary),0.4)]' : 'border-destructive bg-destructive/10 shadow-[0_0_60px_rgba(var(--destructive),0.4)]'}`}>
               <div className="absolute inset-0 rounded-full border-2 border-white/10 animate-ping opacity-20"></div>
               {signal === 'CALL' ? (
-                <ArrowUp className="w-24 h-24 text-primary drop-shadow-[0_0_20px_rgba(var(--primary),0.8)] animate-bounce" />
+                <ArrowUp className="w-20 h-20 text-primary drop-shadow-[0_0_20px_rgba(var(--primary),0.8)] animate-bounce" />
               ) : (
-                <ArrowDown className="w-24 h-24 text-destructive drop-shadow-[0_0_20px_rgba(var(--destructive),0.8)] animate-bounce" />
+                <ArrowDown className="w-20 h-20 text-destructive drop-shadow-[0_0_20px_rgba(var(--destructive),0.8)] animate-bounce" />
               )}
-              <div className="absolute -bottom-4 bg-background px-4 py-1 rounded-full border border-white/10 text-xs font-black tracking-widest uppercase shadow-lg">
-                M5 Expiry
-              </div>
             </div>
 
-            <div className="text-center space-y-2">
-              <h1 className={`text-7xl font-black tracking-tighter ${signal === 'CALL' ? 'text-primary text-neon-blue' : 'text-destructive text-neon-pink'}`}>
+            <div className="text-center space-y-1 w-full">
+              <h1 className={`text-5xl font-black tracking-tighter ${signal === 'CALL' ? 'text-primary' : 'text-destructive'}`}>
                 {signal}
               </h1>
-              <div className="flex flex-col items-center gap-2">
-                 <div className="flex items-center justify-center gap-2 text-sm font-mono text-muted-foreground bg-black/40 px-4 py-1.5 rounded-lg border border-white/5 backdrop-blur-md">
-                   <Timer className="w-4 h-4 text-primary" />
-                   <span>EXPIRES IN <span className="text-white font-bold">{formatTime(expiryTime)}</span></span>
-                 </div>
-                 
-                 {lastSignalSent && (
-                     <div className="flex items-center gap-2 text-[10px] text-green-500 animate-in fade-in slide-in-from-bottom-2">
-                        <CheckCircle2 className="w-3 h-3" />
-                        <span>✅ Sent to Telegram at {lastSignalSent}</span>
-                     </div>
-                 )}
+              <p className="text-lg font-bold text-foreground">{selectedAsset}</p>
+              <div className="flex items-center justify-center gap-2 text-sm font-mono text-muted-foreground">
+                <Timer className="w-3 h-3" />
+                <span>EXPIRES IN <span className="text-white font-bold">{formatTime(expiryTime)}</span></span>
               </div>
             </div>
 
-            <div className="w-full space-y-3 px-4">
-              <div className="flex justify-between text-xs font-mono font-bold">
-                <span className="text-muted-foreground">CONFIDENCE SCORE</span>
-                <span className={signal === 'CALL' ? 'text-primary' : 'text-destructive'}>{confidence}%</span>
+            <div className="w-full space-y-2 px-3">
+              <div className="bg-black/40 border border-white/10 rounded-lg p-3 space-y-2">
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-white/5 p-2 rounded">
+                    <p className="text-muted-foreground text-[10px]">ENTRY</p>
+                    <p className="font-bold text-sm">{signalData?.entryPrice.toFixed(5)}</p>
+                  </div>
+                  <div className="bg-white/5 p-2 rounded">
+                    <p className="text-muted-foreground text-[10px]">STOP LOSS</p>
+                    <p className="font-bold text-sm text-destructive">{signalData?.stopLoss.toFixed(5)}</p>
+                  </div>
+                  <div className="bg-white/5 p-2 rounded">
+                    <p className="text-muted-foreground text-[10px]">TAKE PROFIT</p>
+                    <p className="font-bold text-sm text-primary">{signalData?.takeProfit.toFixed(5)}</p>
+                  </div>
+                  <div className="bg-white/5 p-2 rounded">
+                    <p className="text-muted-foreground text-[10px]">CONFIDENCE</p>
+                    <p className="font-bold text-sm">{confidence}%</p>
+                  </div>
+                </div>
               </div>
-              <Progress value={confidence} className="h-4 bg-secondary" indicatorClassName={signal === 'CALL' ? 'bg-primary shadow-[0_0_15px_rgba(var(--primary),0.6)]' : 'bg-destructive shadow-[0_0_15px_rgba(var(--destructive),0.6)]'} />
+
+              {lastSignalSent && (
+                  <div className="flex items-center gap-2 text-[11px] text-green-400 bg-green-500/10 px-3 py-2 rounded border border-green-500/20 animate-in fade-in">
+                     <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                     <span>✅ SIGNAL SENT TO TELEGRAM</span>
+                  </div>
+              )}
             </div>
           </div>
         )}

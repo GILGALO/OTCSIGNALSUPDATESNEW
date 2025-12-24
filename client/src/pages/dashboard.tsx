@@ -4,9 +4,7 @@ import { SignalCard } from '@/components/signal-card';
 import { MarketAnalysis } from '@/components/market-analysis';
 import { AssetList } from '@/components/asset-list';
 import { ConnectionModal } from '@/components/connection-modal';
-import { RecentSignals } from '@/components/recent-signals';
 import { SettingsPanel } from '@/components/settings-panel';
-import { StatsPanel } from '@/components/stats-panel';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -117,27 +115,21 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <main className="flex-1 p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-[1600px] mx-auto w-full z-10">
+      <main className="flex-1 p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-[1600px] mx-auto w-full z-10">
         
-        <div className="lg:col-span-3 h-full flex flex-col gap-4">
-          <div className="flex-1 min-h-[400px]">
-             <AssetList onSelect={setSelectedAsset} selected={selectedAsset} />
-          </div>
+        <div className="lg:col-span-1 flex flex-col gap-4 h-full">
+          <AssetList onSelect={setSelectedAsset} selected={selectedAsset} />
         </div>
 
-        <div className="lg:col-span-6 space-y-6">
-          <StatsPanel />
-          
-          <TradingChart symbol={selectedAsset} />
-          
-          <RecentSignals />
-        </div>
-
-        <div className="lg:col-span-3 space-y-6 flex flex-col">
+        <div className="lg:col-span-1 flex flex-col gap-4">
           <SignalCard mode={mode} isAutoActive={isAutoActive} selectedAsset={selectedAsset} />
           <div className="flex-1">
             <MarketAnalysis />
           </div>
+        </div>
+
+        <div className="lg:col-span-1 flex flex-col gap-4">
+          <TradingChart symbol={selectedAsset} />
         </div>
       </main>
     </div>
