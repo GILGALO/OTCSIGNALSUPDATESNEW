@@ -38,6 +38,7 @@ export class PocketOptionBrowserClient {
           '--disable-plugins',
           '--disable-default-apps',
           '--no-first-run',
+          '--js-flags="--max-old-space-size=256"', // Limit V8 memory
         ],
       };
 
@@ -195,6 +196,15 @@ export class PocketOptionBrowserClient {
       console.warn('Browser not connected, reconnecting...');
       await this.connect();
     }
+
+    // Force garbage collection if possible and clear page memory
+    try {
+      if (this.page) {
+        await this.page.evaluate(() => {
+          if (window.gc) window.gc();
+        }).catch(() => null);
+      }
+    } catch (e) {}
 
     try {
       console.log(`📊 Fetching REAL market data for ${symbol}...`);
@@ -376,8 +386,13 @@ export class PocketOptionBrowserClient {
   }
 
   async close(): Promise<void> {
+    if (this.page) {
+      await this.page.close().catch(() => null);
+      this.page = null;
+    }
     if (this.browser) {
       await this.browser.close();
+      this.browser = null;
       this.isConnected = false;
       console.log('🔌 Browser connection closed');
     }
