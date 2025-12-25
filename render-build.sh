@@ -18,6 +18,6 @@ fi
 echo "Installing Chrome for Puppeteer..."
 npx puppeteer browsers install chrome
 
-# Run the build directly using npx for absolute path resolution
+# Use Node.js loader directly to avoid npx path issues
 echo "Running the build..."
-npx tsx script/build.ts
+NODE_OPTIONS="--loader tsx" node script/build.ts

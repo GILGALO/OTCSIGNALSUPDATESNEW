@@ -1,0 +1,38 @@
+Downloading cache...
+==> Cloning from https://github.com/GILGALO/OTCSIGNALSUPDATESNEW
+==> Checking out commit 6485215c409099679144d2bee93f686985782917 in branch main
+==> Downloaded 405MB in 3s. Extraction took 14s.
+==> Using Node.js version 22.16.0 (default)
+==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+==> Running build command './render-build.sh'...
+Installing dependencies...
+up to date, audited 467 packages in 1s
+33 packages are looking for funding
+  run `npm fund` for details
+2 low severity vulnerabilities
+To address all issues, run:
+  npm audit fix
+Run `npm audit` for details.
+Creating Puppeteer cache directory...
+Installing Chrome for Puppeteer...
+chrome@143.0.7499.169 /opt/render/project/.cache/puppeteer/chrome/linux-143.0.7499.169/chrome-linux64/chrome
+Running the build...
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'esbuild' imported from /opt/render/project/src/script/build.ts
+    at Object.getPackageJSONURL (node:internal/modules/package_json_reader:256:9)
+    at packageResolve (node:internal/modules/esm/resolve:768:81)
+    at moduleResolve (node:internal/modules/esm/resolve:854:18)
+    at defaultResolve (node:internal/modules/esm/resolve:984:11)
+    at nextResolve (node:internal/modules/esm/hooks:748:28)
+    at resolveBase (file:///opt/render/.cache/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1766640747370:2:3744)
+    at resolveDirectory (file:///opt/render/.cache/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1766640747370:2:4243)
+    at resolveTsPaths (file:///opt/render/.cache/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1766640747370:2:4984)
+    at async resolve (file:///opt/render/.cache/_npx/fd45a72a545557e9/node_modules/tsx/dist/esm/index.mjs?1766640747370:2:5355)
+    at async nextResolve (node:internal/modules/esm/hooks:748:22) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+Node.js v22.16.0
+==> Build failed 😞
+==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
