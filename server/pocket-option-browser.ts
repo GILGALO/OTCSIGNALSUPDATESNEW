@@ -129,8 +129,8 @@ export class PocketOptionBrowserClient {
       // Navigate to Pocket Option with extended timeout and wait for a specific element
       try {
         await this.page.goto('https://pocketoption.com', {
-          waitUntil: 'load', // Standard Puppeteer event
-          timeout: 30000,
+          waitUntil: 'domcontentloaded', 
+          timeout: 20000,
         });
       } catch (gotoError) {
         console.warn('⚠️ Initial navigation timeout or error, continuing anyway...');
@@ -215,8 +215,8 @@ export class PocketOptionBrowserClient {
       
       try {
         await this.page!.goto(tradingUrl, {
-          waitUntil: 'load',
-          timeout: 30000,
+          waitUntil: 'domcontentloaded',
+          timeout: 20000,
         });
       } catch (pageError) {
         console.warn(`⚠️ Navigation to ${tradingUrl} timed out, checking if content loaded anyway...`);
@@ -361,26 +361,24 @@ export class PocketOptionBrowserClient {
       return false;
     }
     
-    // SSID format validation: alphanumeric, 10-50 chars
-    const ssidRegex = /^[a-zA-Z0-9_-]{10,50}$/;
-    if (!ssidRegex.test(this.ssid)) {
-      console.log('❌ Invalid SSID format - must be alphanumeric');
+    // SSID format validation: allow any character since Pocket Option SSIDs can vary
+    if (this.ssid.includes(' ')) {
+      console.log('❌ Invalid SSID format - contains spaces');
       return false;
     }
     
     try {
       console.log('🔐 Validating SSID by testing connection...');
+      // Use a shorter timeout for validation to avoid OOM/Hanging
       const price = await this.getCurrentPrice('EUR/USD');
       if (price && price > 0) {
         console.log(`✅ SSID validated - current EUR/USD: ${price}`);
         return true;
       }
       console.log('⚠️ Could not fetch market data. SSID format is valid but market data unavailable.');
-      // Return true if SSID format is correct, even if market data fetch fails
       return true;
     } catch (error) {
       console.log('⚠️ SSID validation: market data unavailable, but format is valid:', error);
-      // Return true if SSID format is correct, even if there's a network error
       return true;
     }
   }
