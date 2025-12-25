@@ -31,12 +31,21 @@ class PostgresStorage implements IStorage {
       try {
         const pool = new Pool({
           connectionString: process.env.DATABASE_URL,
+          max: 10,
+          idleTimeoutMillis: 30000,
+          connectionTimeoutMillis: 2000,
         });
+        
+        pool.on('error', (err) => {
+          console.error('Unexpected error on idle client', err);
+          this.isConnected = false;
+        });
+
         this.db = drizzle(pool);
         this.isConnected = true;
-        console.log("✅ Database connected");
+        console.log("✅ Database connected and initialized");
       } catch (error) {
-        console.warn("⚠️ Database connection failed, using in-memory storage");
+        console.error("❌ Database connection failed:", error);
         this.isConnected = false;
       }
     } else {
@@ -91,7 +100,8 @@ class PostgresStorage implements IStorage {
         .values(candle)
         .returning();
       return result[0];
-    } catch {
+    } catch (error) {
+      console.error("❌ Error creating candle:", error);
       return { ...candle, id: "", createdAt: new Date() } as Candle;
     }
   }
@@ -106,7 +116,8 @@ class PostgresStorage implements IStorage {
         .orderBy(desc(candles.closeTime))
         .limit(1);
       return result[0];
-    } catch {
+    } catch (error) {
+      console.error("❌ Error getting last candle:", error);
       return undefined;
     }
   }
@@ -127,14 +138,15 @@ class PostgresStorage implements IStorage {
         .orderBy(desc(candles.closeTime))
         .limit(limit);
       return result;
-    } catch {
+    } catch (error) {
+      console.error("❌ Error getting candles before:", error);
       return [];
     }
   }
 
   async createSignal(signal: InsertSignal): Promise<Signal> {
     if (!this.isConnected) {
-      return { ...signal, id: "", createdAt: new Date() } as Signal;
+      return { ...signal, id: "demo-" + Math.random().toString(36).substr(2, 9), createdAt: new Date() } as Signal;
     }
     try {
       const result = await this.db
@@ -142,8 +154,9 @@ class PostgresStorage implements IStorage {
         .values(signal)
         .returning();
       return result[0];
-    } catch {
-      return { ...signal, id: "", createdAt: new Date() } as Signal;
+    } catch (error) {
+      console.error("❌ Error creating signal:", error);
+      return { ...signal, id: "demo-" + Math.random().toString(36).substr(2, 9), createdAt: new Date() } as Signal;
     }
   }
 
@@ -152,7 +165,8 @@ class PostgresStorage implements IStorage {
     try {
       const result = await this.db.select().from(signals).where(eq(signals.id, id));
       return result[0];
-    } catch {
+    } catch (error) {
+      console.error("❌ Error getting signal by id:", error);
       return undefined;
     }
   }
@@ -167,7 +181,8 @@ class PostgresStorage implements IStorage {
         .orderBy(desc(signals.createdAt))
         .limit(limit);
       return result;
-    } catch {
+    } catch (error) {
+      console.error("❌ Error getting recent signals:", error);
       return [];
     }
   }
