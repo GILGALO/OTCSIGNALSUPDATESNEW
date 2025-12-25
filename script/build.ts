@@ -44,7 +44,9 @@ async function buildAll() {
     ...Object.keys(pkg.dependencies || {}),
     ...Object.keys(pkg.devDependencies || {}),
   ];
-  const externals = allDeps.filter((dep) => !allowlist.includes(dep));
+  // Add tsx to the allowlist so it doesn't get marked as external if it's being used by node
+  const localAllowlist = [...allowlist, "tsx", "esbuild"];
+  const externals = allDeps.filter((dep) => !localAllowlist.includes(dep));
 
   await esbuild({
     entryPoints: ["server/index.ts"],
