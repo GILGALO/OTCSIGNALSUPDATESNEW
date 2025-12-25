@@ -18,6 +18,6 @@ fi
 echo "Installing Chrome for Puppeteer..."
 npx puppeteer browsers install chrome
 
-# Run the standard build
+# Run the standard build using npx to ensure local binaries are used
 echo "Running the build..."
-npm run build
+npx tsx script/build.ts
