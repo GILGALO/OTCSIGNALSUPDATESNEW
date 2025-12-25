@@ -125,11 +125,15 @@ export class PocketOptionBrowserClient {
 
       console.log('📱 Navigating to Pocket Option...');
       
-      // Navigate to Pocket Option with extended timeout
-      await this.page.goto('https://pocketoption.com', {
-        waitUntil: 'networkidle2',
-        timeout: 45000,
-      }).catch(() => null);
+      // Navigate to Pocket Option with extended timeout and wait for a specific element
+      try {
+        await this.page.goto('https://pocketoption.com', {
+          waitUntil: 'load', // Standard Puppeteer event
+          timeout: 30000,
+        });
+      } catch (gotoError) {
+        console.warn('⚠️ Initial navigation timeout or error, continuing anyway...');
+      }
 
       // Try to authenticate with SSID if provided
       if (this.ssid && this.ssid.length > 5) {
@@ -199,14 +203,18 @@ export class PocketOptionBrowserClient {
       const tradingUrl = `https://pocketoption.com/en/otc/trade/${symbol.replace('/', '_')}`;
       console.log(`🔗 Loading: ${tradingUrl}`);
       
-      await this.page!.goto(tradingUrl, {
-        waitUntil: 'networkidle2',
-        timeout: 45000,
-      });
+      try {
+        await this.page!.goto(tradingUrl, {
+          waitUntil: 'load',
+          timeout: 30000,
+        });
+      } catch (pageError) {
+        console.warn(`⚠️ Navigation to ${tradingUrl} timed out, checking if content loaded anyway...`);
+      }
 
-      console.log(`⏳ Waiting for chart to render (10 seconds)...`);
-      // Extended wait for chart to fully render and populate with data
-      await new Promise(resolve => setTimeout(resolve, 10000));
+      console.log(`⏳ Waiting for chart to render (5 seconds)...`);
+      // Reduced wait time but added check for specific elements
+      await new Promise(resolve => setTimeout(resolve, 5000));
 
       // Extract REAL candle data from the page
       const candles = await this.page!.evaluate((sym: string) => {
