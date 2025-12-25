@@ -135,6 +135,21 @@ export class PocketOptionBrowserClient {
       if (this.ssid && this.ssid.length > 5) {
         console.log('🔐 Attempting authentication with SSID...');
         await this.authenticateWithSSID();
+        
+        // Extended wait after authentication and reload
+        console.log('⏳ Waiting for session to initialize (5 seconds)...');
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+
+      // Check if we are logged in by looking for common protected elements
+      const isLoggedIn = await this.page.evaluate(() => {
+        return !document.body.innerText.includes('Login') && 
+               !document.body.innerText.includes('Sign in') &&
+               (document.cookie.includes('session') || localStorage.getItem('sessionid') !== null);
+      });
+
+      if (!isLoggedIn) {
+        console.warn('⚠️ Authentication check failed - SSID might be invalid or expired');
       }
 
       this.isConnected = true;

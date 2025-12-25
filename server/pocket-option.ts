@@ -104,12 +104,13 @@ export class PocketOptionClient {
     
     try {
       console.log('🔐 Validating SSID by fetching real market data...');
+      // Use a timeout or handle failure specifically
       const price = await this.getCurrentPrice('EUR/USD');
       if (price && price > 0) {
         console.log(`✅ SSID Valid! Current price: ${price}`);
         return true;
       }
-      console.log('❌ SSID validation failed - no price data');
+      console.log('❌ SSID validation failed - no price data fetched. The SSID might be invalid or market data is temporarily inaccessible.');
       return false;
     } catch (error) {
       console.error(`❌ SSID validation error: ${error}`);
