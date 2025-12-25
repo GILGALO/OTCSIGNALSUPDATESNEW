@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # render-build.sh: Custom build script for Render.com to install Chrome
 
-# Install dependencies
+# Ensure tsx and other dependencies are available
+echo "Installing dependencies..."
 npm install
 
 # Set Puppeteer cache directory
