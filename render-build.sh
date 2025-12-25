@@ -17,6 +17,6 @@ fi
 echo "Installing Chrome for Puppeteer..."
 npx puppeteer browsers install chrome
 
-# Ensure tsx is available globally or use npx
+# Run the standard build
 echo "Running the build..."
-npx tsx script/build.ts
+npm run build
