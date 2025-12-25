@@ -246,8 +246,12 @@ export async function registerRoutes(
             console.log(`[TELEGRAM] Sending signal ${signalId} at ${sendTime.toISOString()}`);
             const result = await telegram.sendSignal(signalPayload);
             if (result.success && result.messageId) {
-              await storage.updateSignalTelegram(signalId, result.messageId);
-              console.log(`[TELEGRAM] ✅ Signal ${signalId} sent (msg: ${result.messageId})`);
+              try {
+                await storage.updateSignalTelegram(signalId, result.messageId);
+                console.log(`[TELEGRAM] ✅ Signal ${signalId} sent (msg: ${result.messageId})`);
+              } catch (dbErr) {
+                console.warn(`[TELEGRAM] Signal sent but failed to update DB: ${dbErr}`);
+              }
             } else {
               console.error(`[TELEGRAM] Signal ${signalId} failed: ${result.error}`);
             }
@@ -263,8 +267,12 @@ export async function registerRoutes(
           console.log(`[TELEGRAM] Sending signal ${signal.id} IMMEDIATELY (generated just now)`);
           const result = await telegram.sendSignal(signalPayload);
           if (result.success && result.messageId) {
-            await storage.updateSignalTelegram(signal.id, result.messageId);
-            console.log(`[TELEGRAM] ✅ Signal ${signal.id} sent immediately (msg: ${result.messageId})`);
+            try {
+              await storage.updateSignalTelegram(signal.id, result.messageId);
+              console.log(`[TELEGRAM] ✅ Signal ${signal.id} sent immediately (msg: ${result.messageId})`);
+            } catch (dbErr) {
+              console.warn(`[TELEGRAM] Signal sent immediately but failed to update DB: ${dbErr}`);
+            }
             telegramResult = {
               success: true,
               messageId: result.messageId,

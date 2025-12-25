@@ -1,0 +1,17 @@
+Running on Render, letting Puppeteer find Chrome automatically
+❌ Browser connection failed: Error: Browser was not found at the configured executablePath (/usr/bin/google-chrome-stable)
+    at ChromeLauncher.launch (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserLauncher.js:90:19)
+    at async Wd.connect (/opt/render/project/src/dist/index.cjs:70:104259)
+    at async Rw (/opt/render/project/src/dist/index.cjs:73:1395)
+    at async Zd.getM5Candles (/opt/render/project/src/dist/index.cjs:73:1658)
+    at async /opt/render/project/src/dist/index.cjs:94:6012
+⚠️ Real market unavailable: Error: Failed to connect to Pocket Option browser client. Using demo data.
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] GBP/USD: type=CALL, confidence=99%, trend=NEUTRAL, adx=33.1
+[TELEGRAM] Sending signal demo-d1j0dqgme IMMEDIATELY (generated just now)
+[TELEGRAM] Exception sending signal demo-d1j0dqgme: Error: Database not available
+    at Vd.updateSignalTelegram (/opt/render/project/src/dist/index.cjs:70:102740)
+    at /opt/render/project/src/dist/index.cjs:94:8708
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+11:03:50 PM [express] POST /api/generate-signal 200 in 510ms :: {"signal":{"id":"demo-d1j0dqgme","type":"CALL","source":"AUTO","confidence":99,"entryPrice":1.2780487301119414,"stopLoss":1.1280487301119415,"takeProfit":1.5780487301119415,"entryTime":"2025-12-25T23:10:00.000Z","expiryTime":"2025-12-25T23:15:00.000Z","technicals":{"rsi":55.33217796164775,"macdLine":0.0011666121963960219,"macdSignal":0.0011666121963960219,"macdHistogram":0,"sma20":1.2758927655413488,"sma50":1.2780487301119414,"ema12":1.276272067782993,"ema26":1.275105455586597,"stochasticK":77.22129668750019,"stochasticD":77.22129668750019,"adx":33.06526152050162,"trend":"NEUTRAL","momentum":"MODERATE"},"scheduledSendTime":"2025-12-25T23:03:50.139Z"},"telegram":{"success":false,"error":"Database not available"}}

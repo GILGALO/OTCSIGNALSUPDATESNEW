@@ -47,12 +47,32 @@ export class PocketOptionBrowserClient {
         const renderPath = process.env.PUPPETEER_EXECUTABLE_PATH;
         
         if (isRender) {
-          console.log("🚀 Running on Render, letting Puppeteer find Chrome automatically");
-          // On Render, if we installed with 'puppeteer browsers install chrome', 
-          // it's better to let puppeteer-core or puppeteer find it in the cache
-          // or use the environment variable if set.
-          if (renderPath) {
-            launchOptions.executablePath = renderPath;
+          console.log("🚀 Running on Render, looking for installed Chrome...");
+          // On Render, check common installation paths first before falling back
+          // We check the exact version that was installed in the logs
+          const renderCachePaths = [
+            '/opt/render/project/.cache/puppeteer/chrome/linux-143.0.7499.169/chrome-linux64/chrome',
+            '/opt/render/project/.cache/puppeteer/chrome/linux-133.0.6943.126/chrome-linux64/chrome',
+            process.env.PUPPETEER_EXECUTABLE_PATH,
+            // Fallback to finding it via shell if path doesn't exist
+            '/usr/bin/google-chrome-stable'
+          ].filter(Boolean) as string[];
+
+          let foundPath = null;
+          for (const p of renderCachePaths) {
+            try {
+              if (require('fs').existsSync(p)) {
+                foundPath = p;
+                break;
+              }
+            } catch (e) {}
+          }
+
+          if (foundPath) {
+            console.log(`📍 Found Chrome at: ${foundPath}`);
+            launchOptions.executablePath = foundPath;
+          } else {
+            console.log("⚠️ No specific Render path found, letting Puppeteer resolve...");
           }
         } else if (renderPath) {
           console.log(`📍 Using configured Chrome path: ${renderPath}`);
