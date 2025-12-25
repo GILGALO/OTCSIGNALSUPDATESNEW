@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
-# render-build.sh: Custom build script for Render.com to install Chrome
+# render-build.sh: Optimized build script for Render.com
 
-# Ensure dependencies are available
+# Fail on error
+set -e
+
 echo "Installing dependencies..."
-npm install
+# Use --include=dev to ensure tsx and esbuild are available for the build script
+npm install --include=dev
 
 # Set Puppeteer cache directory
 export PUPPETEER_CACHE_DIR=/opt/render/project/.cache/puppeteer
@@ -20,7 +23,4 @@ npx puppeteer browsers install chrome
 
 # Run the standard build
 echo "Running the build..."
-# Reverting to npm run build as the standard, but ensuring tsx and esbuild are accessible
-# tsx script/build.ts is what 'npm run build' does.
-# Using 'npx' is safer in Render's environment to resolve local binaries.
-npx tsx script/build.ts
+npm run build
