@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # render-build.sh: Custom build script for Render.com to install Chrome
 
-# Ensure tsx and other dependencies are available
+# Ensure dependencies are available
 echo "Installing dependencies..."
 npm install
 
@@ -18,6 +18,6 @@ fi
 echo "Installing Chrome for Puppeteer..."
 npx puppeteer browsers install chrome
 
-# Run the standard build using npx to ensure local binaries are used
+# Run the standard build
 echo "Running the build..."
-npx tsx script/build.ts
+npm run build
