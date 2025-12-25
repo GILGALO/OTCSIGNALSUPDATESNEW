@@ -48,10 +48,33 @@ export class PocketOptionBrowserClient {
           console.log(`📍 Using Render Chrome path: ${renderPath}`);
           launchOptions.executablePath = renderPath;
         } else {
-          const execPath = await (puppeteer as any).resolveExecutable?.();
-          if (execPath) {
-            console.log(`📍 Using auto-resolved Chrome from: ${execPath}`);
-            launchOptions.executablePath = execPath;
+          // Fallback discovery for Render.com common paths
+          const possiblePaths = [
+            '/usr/bin/google-chrome-stable',
+            '/usr/bin/google-chrome',
+            '/opt/render/.cache/puppeteer/chrome/linux-133.0.6943.126/chrome-linux64/chrome',
+            '/opt/render/project/.cache/puppeteer/chrome/linux-133.0.6943.126/chrome-linux64/chrome'
+          ];
+          
+          let foundPath = null;
+          for (const path of possiblePaths) {
+            try {
+              if (require('fs').existsSync(path)) {
+                foundPath = path;
+                break;
+              }
+            } catch (e) {}
+          }
+
+          if (foundPath) {
+            console.log(`📍 Found Chrome at: ${foundPath}`);
+            launchOptions.executablePath = foundPath;
+          } else {
+            const execPath = await (puppeteer as any).resolveExecutable?.();
+            if (execPath) {
+              console.log(`📍 Using auto-resolved Chrome from: ${execPath}`);
+              launchOptions.executablePath = execPath;
+            }
           }
         }
       } catch (e) {
