@@ -43,10 +43,16 @@ export class PocketOptionBrowserClient {
 
       // Try to resolve Chrome executable path (important for Render)
       try {
-        const execPath = await (puppeteer as any).resolveExecutable?.();
-        if (execPath) {
-          console.log(`📍 Using Chrome from: ${execPath}`);
-          launchOptions.executablePath = execPath;
+        const renderPath = process.env.PUPPETEER_EXECUTABLE_PATH;
+        if (renderPath) {
+          console.log(`📍 Using Render Chrome path: ${renderPath}`);
+          launchOptions.executablePath = renderPath;
+        } else {
+          const execPath = await (puppeteer as any).resolveExecutable?.();
+          if (execPath) {
+            console.log(`📍 Using auto-resolved Chrome from: ${execPath}`);
+            launchOptions.executablePath = execPath;
+          }
         }
       } catch (e) {
         console.log('ℹ️ Chrome auto-detection skipped, letting Puppeteer find it');

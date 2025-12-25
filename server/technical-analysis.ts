@@ -236,18 +236,18 @@ export function generateSignalFromTechnicals(metrics: TechnicalMetrics, currentP
   totalChecks += 2;
 
   // 4. RSI - Momentum validation (must be in healthy zone, not extreme)
-  if (metrics.rsi > 50 && metrics.rsi < 70) {
+  if (metrics.rsi > 50 && metrics.rsi < 65) {
     bullishScore += 2; // Moderate bullish momentum
-  } else if (metrics.rsi < 50 && metrics.rsi > 30) {
+  } else if (metrics.rsi < 50 && metrics.rsi > 35) {
     bearishScore += 2; // Moderate bearish momentum
-  } else if (metrics.rsi > 70 || metrics.rsi < 30) {
+  } else if (metrics.rsi > 65 || metrics.rsi < 35) {
     // Extreme RSI means we skip this - potential reversal
     totalChecks += 0;
   }
   totalChecks += 2;
 
   // 5. ADX - Trend strength confirmation (must have clear direction)
-  if (metrics.adx > 30) {
+  if (metrics.adx > 25) {
     if (metrics.trend === 'BULLISH') {
       bullishScore += 2; // Strong trending bullish
     } else if (metrics.trend === 'BEARISH') {
@@ -257,9 +257,9 @@ export function generateSignalFromTechnicals(metrics: TechnicalMetrics, currentP
   totalChecks += 2;
 
   // 6. Stochastic - Directional confirmation
-  if (metrics.stochasticK > 50 && metrics.stochasticK < 80) {
+  if (metrics.stochasticK > 50 && metrics.stochasticK < 85) {
     bullishScore += 1;
-  } else if (metrics.stochasticK < 50 && metrics.stochasticK > 20) {
+  } else if (metrics.stochasticK < 50 && metrics.stochasticK > 15) {
     bearishScore += 1;
   }
   totalChecks += 1;
@@ -279,15 +279,16 @@ export function generateSignalFromTechnicals(metrics: TechnicalMetrics, currentP
   const bearishRatio = bearishScore / totalScore;
 
   // Generate signals with good confidence when indicators align
-  if (bullishRatio > bearishRatio && bullishScore >= 6) {
+  // Lowered consensus requirement from 6 to 5 for more frequent signals
+  if (bullishRatio > bearishRatio && bullishScore >= 5) {
     // Bullish signal
     type = 'CALL';
-    // Base confidence on how strong the bullish agreement is
-    confidence = Math.min(90, 50 + Math.round((bullishRatio - 0.5) * 80) + bullishScore);
-  } else if (bearishRatio > bullishRatio && bearishScore >= 6) {
+    // Base confidence boosted for clearer scores
+    confidence = Math.min(99, 65 + Math.round((bullishRatio - 0.5) * 60) + (bullishScore * 2));
+  } else if (bearishRatio > bullishRatio && bearishScore >= 5) {
     // Bearish signal
     type = 'PUT';
-    confidence = Math.min(90, 50 + Math.round((bearishRatio - 0.5) * 80) + bearishScore);
+    confidence = Math.min(99, 65 + Math.round((bearishRatio - 0.5) * 60) + (bearishScore * 2));
   }
 
   return { type, confidence: Math.round(Math.max(0, confidence)) };
