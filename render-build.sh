@@ -20,4 +20,7 @@ npx puppeteer browsers install chrome
 
 # Run the standard build
 echo "Running the build..."
+# Reverting to npm run build as the standard, but ensuring tsx and esbuild are accessible
+# tsx script/build.ts is what 'npm run build' does.
+# Using 'npx' is safer in Render's environment to resolve local binaries.
 npx tsx script/build.ts
