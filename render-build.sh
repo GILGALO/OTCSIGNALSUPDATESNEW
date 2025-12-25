@@ -18,6 +18,6 @@ fi
 echo "Installing Chrome for Puppeteer..."
 npx puppeteer browsers install chrome
 
-# Run the standard build with npx to ensure tsx is found even if not in PATH
+# Run the build directly using npx for absolute path resolution
 echo "Running the build..."
 npx tsx script/build.ts
