@@ -43,9 +43,19 @@ export class PocketOptionBrowserClient {
 
       // Try to resolve Chrome executable path (important for Render)
       try {
+        const isRender = process.env.RENDER === 'true';
         const renderPath = process.env.PUPPETEER_EXECUTABLE_PATH;
-        if (renderPath) {
-          console.log(`📍 Using Render Chrome path: ${renderPath}`);
+        
+        if (isRender) {
+          console.log("🚀 Running on Render, letting Puppeteer find Chrome automatically");
+          // On Render, if we installed with 'puppeteer browsers install chrome', 
+          // it's better to let puppeteer-core or puppeteer find it in the cache
+          // or use the environment variable if set.
+          if (renderPath) {
+            launchOptions.executablePath = renderPath;
+          }
+        } else if (renderPath) {
+          console.log(`📍 Using configured Chrome path: ${renderPath}`);
           launchOptions.executablePath = renderPath;
         } else {
           // Fallback discovery for Render.com common paths
