@@ -6,10 +6,10 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 channel = "stable-25_05"
 
 [deployment]
-deploymentTarget = "vm"
-build = ["bash", "-c", "npm run build && PUPPETEER_SKIP_CHROME_HEADLESS_SHELL_WRAPPER=true npm exec -- puppeteer browsers install chrome"]
+deploymentTarget = "autoscale"
+build = ["npm", "run", "build"]
 publicDir = "dist/public"
-run = ["bash", "-c", "export PUPPETEER_CACHE_DIR=/opt/render/.cache/puppeteer && npm start"]
+run = ["node", "./dist/index.cjs"]
 
 [[ports]]
 localPort = 5000
