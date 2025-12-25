@@ -1,0 +1,60 @@
+Starting scan for EUR/USD
+🔄 Attempting to fetch REAL market data for EUR/USD...
+🌐 Launching headless browser for Pocket Option...
+📍 Using Render Chrome path: /usr/bin/google-chrome-stable
+❌ Browser connection failed: Error: Browser was not found at the configured executablePath (/usr/bin/google-chrome-stable)
+    at ChromeLauncher.launch (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserLauncher.js:90:19)
+    at async Wd.connect (/opt/render/project/src/dist/index.cjs:70:104037)
+    at async Rw (/opt/render/project/src/dist/index.cjs:73:1395)
+    at async Zd.getM5Candles (/opt/render/project/src/dist/index.cjs:73:1658)
+    at async /opt/render/project/src/dist/index.cjs:94:6012
+⚠️ Real market unavailable: Error: Failed to connect to Pocket Option browser client. Using demo data.
+📌 NOTE: On Render with system libraries, this will use REAL market data
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] EUR/USD: type=CALL, confidence=99%, trend=NEUTRAL, adx=39.4
+[TELEGRAM] Sending signal demo-hkinwqegp IMMEDIATELY (generated just now)
+[TELEGRAM] Exception sending signal demo-hkinwqegp: Error: Database not available
+    at Vd.updateSignalTelegram (/opt/render/project/src/dist/index.cjs:70:102674)
+    at /opt/render/project/src/dist/index.cjs:94:8708
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+8:13:20 PM [express] POST /api/generate-signal 200 in 1020ms :: {"signal":{"id":"demo-hkinwqegp","type":"CALL","source":"MANUAL","confidence":99,"entryPrice":1.098974590444085,"stopLoss":0.948974590444085,"takeProfit":1.3989745904440851,"entryTime":"2025-12-25T20:20:00.000Z","expiryTime":"2025-12-25T20:25:00.000Z","technicals":{"rsi":56.076072916853946,"macdLine":0.0004123095983596947,"macdSignal":0.0004123095983596947,"macdHistogram":0,"sma20":1.0975676191814832,"sma50":1.098974590444085,"ema12":1.0981873410004714,"ema26":1.0977750314021117,"stochasticK":77.37720994056644,"stochasticD":77.37720994056644,"adx":39.373017046717926,"trend":"NEUTRAL","momentum":"MODERATE"},"scheduledSendTime":"2025-12-25T20:13:20.110Z"},"telegram":{"success":false,"error":"Database not available"}}
+==> Setting WEB_CONCURRENCY=1 by default, based on available CPUs in the instance
+==> Deploying...
+🔍 [SIGNAL] Starting scan for GBP/USD
+🔄 Attempting to fetch REAL market data for GBP/USD...
+🌐 Launching headless browser for Pocket Option...
+📍 Using Render Chrome path: /usr/bin/google-chrome-stable
+❌ Browser connection failed: Error: Browser was not found at the configured executablePath (/usr/bin/google-chrome-stable)
+    at ChromeLauncher.launch (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserLauncher.js:90:19)
+    at async Wd.connect (/opt/render/project/src/dist/index.cjs:70:104037)
+    at async Rw (/opt/render/project/src/dist/index.cjs:73:1395)
+    at async Zd.getM5Candles (/opt/render/project/src/dist/index.cjs:73:1658)
+    at async /opt/render/project/src/dist/index.cjs:94:6012
+⚠️ Real market unavailable: Error: Failed to connect to Pocket Option browser client. Using demo data.
+📌 NOTE: On Render with system libraries, this will use REAL market data
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] GBP/USD: type=PUT, confidence=99%, trend=NEUTRAL, adx=39.8
+[TELEGRAM] Sending signal demo-sbwbq5wnq IMMEDIATELY (generated just now)
+[TELEGRAM] Exception sending signal demo-sbwbq5wnq: Error: Database not available
+    at Vd.updateSignalTelegram (/opt/render/project/src/dist/index.cjs:70:102674)
+    at /opt/render/project/src/dist/index.cjs:94:8708
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+8:13:49 PM [express] POST /api/generate-signal 200 in 532ms :: {"signal":{"id":"demo-sbwbq5wnq","type":"PUT","source":"AUTO","confidence":99,"entryPrice":1.2698583149802676,"stopLoss":1.4198583149802675,"takeProfit":0.9698583149802675,"entryTime":"2025-12-25T20:20:00.000Z","expiryTime":"2025-12-25T20:25:00.000Z","technicals":{"rsi":37.885811211798014,"macdLine":-0.0007223399411806497,"macdSignal":-0.0007223399411806497,"macdHistogram":0,"sma20":1.2711812922771357,"sma50":1.2698583149802676,"ema12":1.270108297491782,"ema26":1.2708306374329625,"stochasticK":30.657688209634948,"stochasticD":30.657688209634948,"adx":39.82254936763121,"trend":"NEUTRAL","momentum":"MODERATE"},"scheduledSendTime":"2025-12-25T20:13:49.718Z"},"telegram":{"success":false,"error":"Database not available"}}
+🔍 [SIGNAL] Starting scan for GBP/USD
+8:13:49 PM [express] POST /api/generate-signal 200 in 80ms :: {"signal":null,"message":"Already sent signal for GBP/USD this M5 cycle. Wait 300s for next cycle.","cooldown":300}
+==> Running 'npm run start'
+> rest-express@1.0.0 start
+> NODE_ENV=production node dist/index.cjs
+⚠️ DATABASE_URL not set, using in-memory storage
+8:14:10 PM [express] Server running on port 10000
+==> Your service is live 🎉
+==> 
+==> ///////////////////////////////////////////////////////////
+==> 
+==> Available at your primary URL https://otcsignalsupdatesnew-mefn.onrender.com
+==> 
+==> ///////////////////////////////////////////////////////////
+==> Detected service running on port 10000
+==> Docs on specifying a port: https://render.com/docs/web-services#port-binding

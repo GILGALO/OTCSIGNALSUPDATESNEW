@@ -27,13 +27,15 @@ class PostgresStorage implements IStorage {
   private isConnected: boolean = false;
 
   constructor() {
-    if (process.env.DATABASE_URL) {
+    const dbUrl = process.env.DATABASE_URL;
+    if (dbUrl) {
       try {
         const pool = new Pool({
-          connectionString: process.env.DATABASE_URL,
+          connectionString: dbUrl,
           max: 10,
           idleTimeoutMillis: 30000,
           connectionTimeoutMillis: 2000,
+          ssl: dbUrl.includes("render.com") || dbUrl.includes("neon.tech") ? { rejectUnauthorized: false } : false
         });
         
         pool.on('error', (err) => {
