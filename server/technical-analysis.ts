@@ -261,19 +261,19 @@ export function generateSignalFromTechnicals(metrics: TechnicalMetrics, currentP
   let type: 'CALL' | 'PUT' | 'WAIT' = 'WAIT';
   let confidence = 0;
 
-  // STRICT CONSENSUS CALCULATION
+  // BALANCED CONSENSUS CALCULATION
   // Max possible score is 15 (3+4+3+3+2)
-  // Require score of 9+ for HIGH PROBABILITY signals only
-  // This means: strong trend + momentum confirmation + directional alignment
-  const MIN_SCORE = 9;
+  // Require score of 7+ for more frequent signals, but with quality floor
+  // Score 7-8 = decent quality, Score 9+ = excellent quality
+  const MIN_SCORE = 7;
 
   if (bullishScore >= MIN_SCORE && bullishScore > bearishScore) {
     type = 'CALL';
-    // Map score 9-15 to confidence 82-99 (higher base for better setups)
-    confidence = 82 + Math.round(((bullishScore - MIN_SCORE) / (15 - MIN_SCORE)) * 17);
+    // Map score 7-15 to confidence 75-99 (more signals with solid confidence)
+    confidence = 75 + Math.round(((bullishScore - MIN_SCORE) / (15 - MIN_SCORE)) * 24);
   } else if (bearishScore >= MIN_SCORE && bearishScore > bullishScore) {
     type = 'PUT';
-    confidence = 82 + Math.round(((bearishScore - MIN_SCORE) / (15 - MIN_SCORE)) * 17);
+    confidence = 75 + Math.round(((bearishScore - MIN_SCORE) / (15 - MIN_SCORE)) * 24);
   }
 
   return { type, confidence };
