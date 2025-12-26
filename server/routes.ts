@@ -162,7 +162,7 @@ export async function registerRoutes(
       console.log(`📊 [SIGNAL] ${symbol}: type=${type}, confidence=${confidence}%, trend=${metrics.trend}, adx=${metrics.adx.toFixed(1)}`);
 
       // Balanced accuracy threshold - Refined for OTC
-      const MINIMUM_CONFIDENCE_THRESHOLD = 70;
+      const MINIMUM_CONFIDENCE_THRESHOLD = 45;
       
       if (type === "WAIT") {
         return res.json({ 
