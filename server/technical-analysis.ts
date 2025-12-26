@@ -167,13 +167,16 @@ export function analyzeCandles(candles: Candle[]): TechnicalMetrics {
   const stoch = calculateStochastic(candles);
   const adx = calculateADX(candles);
   
-  // Determine trend
+  // Determine trend - Refined for OTC
   const currentClose = closes[closes.length - 1];
   let trend: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = 'NEUTRAL';
   
-  if (currentClose > sma20 && currentClose > sma50 && ema12 > ema26) {
+  const isSmaBullish = currentClose > sma20 && sma20 > sma50;
+  const isEmaBullish = ema12 > ema26 && currentClose > ema12;
+  
+  if (isSmaBullish && isEmaBullish) {
     trend = 'BULLISH';
-  } else if (currentClose < sma20 && currentClose < sma50 && ema12 < ema26) {
+  } else if (currentClose < sma20 && sma20 < sma50 && ema12 < ema26 && currentClose < ema12) {
     trend = 'BEARISH';
   }
   
@@ -202,94 +205,62 @@ export function analyzeCandles(candles: Candle[]): TechnicalMetrics {
   };
 }
 
-// Generate signal based on technicals - ULTRA-HIGH ACCURACY CONSENSUS APPROACH
+// Generate signal based on technicals - REFINED CONSENSUS APPROACH
 export function generateSignalFromTechnicals(metrics: TechnicalMetrics, currentPrice: number): { type: 'CALL' | 'PUT' | 'WAIT'; confidence: number } {
   let bullishScore = 0;
   let bearishScore = 0;
-  let totalChecks = 0;
 
-  // 1. MACD - Primary trend indicator (weighted heavily)
-  if (metrics.macdHistogram > 0.0001 && metrics.macdLine > metrics.macdSignal) {
-    bullishScore += 3; // Strong bullish signal
-  } else if (metrics.macdHistogram < -0.0001 && metrics.macdLine < metrics.macdSignal) {
-    bearishScore += 3; // Strong bearish signal
-  }
-  totalChecks += 3;
-
-  // 2. Moving Averages - Trend structure confirmation (critical)
-  const bullishTrend = currentPrice > metrics.sma20 && metrics.sma20 > metrics.sma50;
-  const bearishTrend = currentPrice < metrics.sma20 && metrics.sma20 < metrics.sma50;
-  
-  if (bullishTrend) {
+  // 1. MACD - Trend direction (Weighted 3)
+  if (metrics.macdHistogram > 0 && metrics.macdLine > metrics.macdSignal) {
     bullishScore += 3;
-  } else if (bearishTrend) {
+  } else if (metrics.macdHistogram < 0 && metrics.macdLine < metrics.macdSignal) {
     bearishScore += 3;
   }
-  totalChecks += 3;
 
-  // 3. EMA Alignment - Secondary confirmation
-  if (metrics.ema12 > metrics.ema26 && currentPrice > metrics.ema12) {
+  // 2. Trend Alignment - SMA & EMA (Weighted 4)
+  if (metrics.trend === 'BULLISH') {
+    bullishScore += 4;
+  } else if (metrics.trend === 'BEARISH') {
+    bearishScore += 4;
+  }
+
+  // 3. RSI - Momentum Validation (Weighted 2)
+  // Optimal OTC "sweet spot" is 40-60
+  if (metrics.rsi > 52 && metrics.rsi < 70) {
     bullishScore += 2;
-  } else if (metrics.ema12 < metrics.ema26 && currentPrice < metrics.ema12) {
+  } else if (metrics.rsi < 48 && metrics.rsi > 30) {
     bearishScore += 2;
   }
-  totalChecks += 2;
 
-  // 4. RSI - Momentum validation (must be in healthy zone, not extreme)
-  if (metrics.rsi > 50 && metrics.rsi < 65) {
-    bullishScore += 2; // Moderate bullish momentum
-  } else if (metrics.rsi < 50 && metrics.rsi > 35) {
-    bearishScore += 2; // Moderate bearish momentum
-  } else if (metrics.rsi > 65 || metrics.rsi < 35) {
-    // Extreme RSI means we skip this - potential reversal
-    totalChecks += 0;
+  // 4. ADX - Trend Strength (Weighted 2)
+  if (metrics.adx > 22) {
+    if (metrics.trend === 'BULLISH') bullishScore += 2;
+    if (metrics.trend === 'BEARISH') bearishScore += 2;
   }
-  totalChecks += 2;
 
-  // 5. ADX - Trend strength confirmation (must have clear direction)
-  if (metrics.adx > 25) {
-    if (metrics.trend === 'BULLISH') {
-      bullishScore += 2; // Strong trending bullish
-    } else if (metrics.trend === 'BEARISH') {
-      bearishScore += 2; // Strong trending bearish
-    }
-  }
-  totalChecks += 2;
-
-  // 6. Stochastic - Directional confirmation
-  if (metrics.stochasticK > 50 && metrics.stochasticK < 85) {
+  // 5. Stochastic - Micro-momentum (Weighted 1)
+  if (metrics.stochasticK > 50) {
     bullishScore += 1;
-  } else if (metrics.stochasticK < 50 && metrics.stochasticK > 15) {
+  } else if (metrics.stochasticK < 50) {
     bearishScore += 1;
   }
-  totalChecks += 1;
 
   let type: 'CALL' | 'PUT' | 'WAIT' = 'WAIT';
   let confidence = 0;
 
-  // Calculate win probability based on score ratio
-  const totalScore = bullishScore + bearishScore;
-  
-  if (totalScore === 0) {
-    // No clear signal
-    return { type: 'WAIT', confidence: 0 };
-  }
+  // CONSENSUS CALCULATION
+  // Max possible score is 12. 
+  // We require a minimum of 7 for a signal (Strong consensus)
+  const MIN_SCORE = 7;
 
-  const bullishRatio = bullishScore / totalScore;
-  const bearishRatio = bearishScore / totalScore;
-
-  // Generate signals with good confidence when indicators align
-  // Lowered consensus requirement from 6 to 5 for more frequent signals
-  if (bullishRatio > bearishRatio && bullishScore >= 5) {
-    // Bullish signal
+  if (bullishScore >= MIN_SCORE && bullishScore > bearishScore) {
     type = 'CALL';
-    // Base confidence boosted for clearer scores
-    confidence = Math.min(99, 65 + Math.round((bullishRatio - 0.5) * 60) + (bullishScore * 2));
-  } else if (bearishRatio > bullishRatio && bearishScore >= 5) {
-    // Bearish signal
+    // Map score 7-12 to confidence 75-99
+    confidence = 75 + Math.round(((bullishScore - MIN_SCORE) / (12 - MIN_SCORE)) * 24);
+  } else if (bearishScore >= MIN_SCORE && bearishScore > bullishScore) {
     type = 'PUT';
-    confidence = Math.min(99, 65 + Math.round((bearishRatio - 0.5) * 60) + (bearishScore * 2));
+    confidence = 75 + Math.round(((bearishScore - MIN_SCORE) / (12 - MIN_SCORE)) * 24);
   }
 
-  return { type, confidence: Math.round(Math.max(0, confidence)) };
+  return { type, confidence };
 }

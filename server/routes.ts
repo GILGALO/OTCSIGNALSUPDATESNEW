@@ -156,8 +156,8 @@ export async function registerRoutes(
       const { type, confidence } = generateSignalFromTechnicals(metrics, currentPrice);
       console.log(`📊 [SIGNAL] ${symbol}: type=${type}, confidence=${confidence}%, trend=${metrics.trend}, adx=${metrics.adx.toFixed(1)}`);
 
-      // Balanced accuracy threshold - enough to be profitable, not so strict we miss opportunities
-      const MINIMUM_CONFIDENCE_THRESHOLD = 60;
+      // Balanced accuracy threshold - Refined for OTC
+      const MINIMUM_CONFIDENCE_THRESHOLD = 70;
       
       if (type === "WAIT") {
         return res.json({ 
