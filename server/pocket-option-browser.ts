@@ -76,8 +76,7 @@ export class PocketOptionBrowserClient {
           '--metrics-recording-only',
           '--mute-audio',
           '--no-pings'
-        ],
-        ignoreHTTPSErrors: true
+        ]
       });
 
       PocketOptionBrowserClient.instance = browser;
@@ -216,28 +215,70 @@ export class PocketOptionBrowserClient {
       const tradingUrl = `https://pocketoption.com/en/otc/trade/${symbol.replace('/', '_')}`;
       console.log(`🔗 Loading Chart: ${tradingUrl}`);
       
+      // Track API responses for candle data
+      const capturedResponses: any[] = [];
+      const responseHandler = async (response: any) => {
+        try {
+          const url = response.url();
+          // Capture API calls that might contain candle data
+          if (url.includes('candle') || url.includes('chart') || url.includes('history') || url.includes('bar')) {
+            const contentType = response.headers()['content-type'] || '';
+            if (contentType.includes('application/json')) {
+              try {
+                const data = await response.json();
+                capturedResponses.push(data);
+              } catch (e) {
+                // Ignore parse errors
+              }
+            }
+          }
+        } catch (e) {
+          // Ignore response errors
+        }
+      };
+
+      this.page!.on('response', responseHandler);
+      
       await this.page!.goto(tradingUrl, {
-        waitUntil: 'domcontentloaded',
+        waitUntil: 'networkidle2',
         timeout: 90000,
       }).catch(() => null);
 
-      // Wait for data to populate
-      await new Promise(resolve => setTimeout(resolve, 15000));
+      // Wait a bit more for any delayed API calls
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      this.page!.off('response', responseHandler);
 
+      // Try to extract candles from captured API responses
+      for (const response of capturedResponses) {
+        const candles = this.extractCandlesFromResponse(response);
+        if (candles.length > 0) {
+          console.log(`✅ Extracted ${candles.length} candles from API response`);
+          return candles.slice(-count);
+        }
+      }
+
+      // Fallback: try to extract from window globals
       const candles = await this.page!.evaluate(() => {
         const windowGlobals = (window as any);
         const dataStructures = [
           windowGlobals.TradingApp?.chart?.candles,
-          windowGlobals.TradingApp?.chart?.history,
+          windowGlobals.TradingApp?.data?.candles,
+          windowGlobals.TradingApp?.candles,
           windowGlobals.__STORE__?.getState?.()?.chart?.candles,
           windowGlobals.PoChart?.candles,
-          windowGlobals.state?.candles
+          windowGlobals.state?.candles,
+          windowGlobals.chartsData?.candles,
+          // Try to find any window property that has array of candle-like objects
+          Object.values(windowGlobals).find((obj: any) => 
+            Array.isArray(obj) && obj.length > 0 && 
+            obj[0]?.open && obj[0]?.close && obj[0]?.high && obj[0]?.low
+          )
         ];
 
         for (const data of dataStructures) {
           if (Array.isArray(data) && data.length > 0) {
             return data.map((c: any) => ({
-              timestamp: Math.floor((c.time || c.timestamp || Date.now()) / 1000),
+              timestamp: Math.floor((c.time || c.timestamp || c.t || Date.now()) / 1000),
               open: parseFloat(c.open || c.o || 0),
               high: parseFloat(c.high || c.h || 0),
               low: parseFloat(c.low || c.l || 0),
@@ -249,15 +290,48 @@ export class PocketOptionBrowserClient {
         return [];
       });
 
-      if (candles.length === 0) {
-        console.warn('⚠️ No candle data extracted from page globals');
+      if (candles.length > 0) {
+        console.log(`✅ Extracted ${candles.length} candles from window globals`);
+        return candles.slice(-count);
       }
 
-      return candles.length > 0 ? candles.slice(-count) : [];
+      console.warn('⚠️ No candle data extracted from page - neither API nor window globals');
+      return [];
     } catch (error) {
       console.error(`❌ Data fetch error: ${error}`);
       return [];
     }
+  }
+
+  private extractCandlesFromResponse(data: any): CandleData[] {
+    // Try common response structures
+    const candleArrays = [
+      data?.data?.candles,
+      data?.candles,
+      data?.bars,
+      data?.history,
+      data?.chart?.candles,
+      data?.ohlc,
+      data?.prices,
+      // If data is directly an array of candles
+      Array.isArray(data) ? data : null
+    ];
+
+    for (const arr of candleArrays) {
+      if (Array.isArray(arr) && arr.length > 0) {
+        const mapped = arr.map((c: any) => ({
+          timestamp: Math.floor((c.time || c.timestamp || c.t || c.timeStamp || Date.now()) / (c.time && c.time > 1e10 ? 1000 : 1)),
+          open: parseFloat(c.open || c.o || c.Open || 0),
+          high: parseFloat(c.high || c.h || c.High || 0),
+          low: parseFloat(c.low || c.l || c.Low || 0),
+          close: parseFloat(c.close || c.c || c.Close || 0),
+          volume: parseFloat(c.volume || c.v || c.Volume || 5000),
+        })).filter(c => c.open > 0 && c.close > 0 && c.high > 0 && c.low > 0);
+
+        if (mapped.length > 0) return mapped;
+      }
+    }
+    return [];
   }
 
   async validateSSID(): Promise<boolean> {
