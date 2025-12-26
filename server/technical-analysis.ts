@@ -149,8 +149,8 @@ export function analyzeVolumeSignal(candles: Candle[]): 'STRONG' | 'WEAK' {
   const avgRecent = recentVolumes.reduce((a, b) => a + b, 0) / recentVolumes.length;
   const avgHistorical = historicalVolumes.reduce((a, b) => a + b, 0) / historicalVolumes.length;
   
-  // Volume spike = 1.5x above average = strong conviction
-  return avgRecent > avgHistorical * 1.5 ? 'STRONG' : 'WEAK';
+  // Volume spike = 1.3x above average = strong conviction (lowered from 1.5x)
+  return avgRecent > avgHistorical * 1.3 ? 'STRONG' : 'WEAK';
 }
 
 // Calculate Volatility - ATR (Average True Range)
@@ -275,17 +275,6 @@ export function generateSignalFromTechnicals(metrics: TechnicalMetrics, currentP
   let bullishScore = 0;
   let bearishScore = 0;
 
-  // MANDATORY FILTERS FOR WINNING TRADES
-  // Market must be trending AND volume confirms = real money moving
-  if (metrics.adx < 25) {
-    return { type: 'WAIT', confidence: 0 };
-  }
-
-  // Volume must spike (conviction) for winning trades
-  if (metrics.volumeSignal === 'WEAK') {
-    return { type: 'WAIT', confidence: 0 };
-  }
-
   // 1. MACD - Trend direction (Weighted 3)
   if (metrics.macdHistogram > 0.001 && metrics.macdLine > metrics.macdSignal) {
     bullishScore += 3;
@@ -307,11 +296,16 @@ export function generateSignalFromTechnicals(metrics: TechnicalMetrics, currentP
     bearishScore += 3;
   }
 
-  // 4. ADX - Strong Trend Strength (Weighted 3)
+  // 4. ADX - Trend Strength (bonus points, not mandatory)
+  // Lower ADX = less confident, higher ADX = more confident
   if (metrics.adx > 35) {
     if (metrics.trend === 'BULLISH') bullishScore += 3;
     if (metrics.trend === 'BEARISH') bearishScore += 3;
   } else if (metrics.adx > 25) {
+    if (metrics.trend === 'BULLISH') bullishScore += 2;
+    if (metrics.trend === 'BEARISH') bearishScore += 2;
+  } else if (metrics.adx > 20) {
+    // Still allow signals with weak trend, but less confidence
     if (metrics.trend === 'BULLISH') bullishScore += 1;
     if (metrics.trend === 'BEARISH') bearishScore += 1;
   }
@@ -331,21 +325,28 @@ export function generateSignalFromTechnicals(metrics: TechnicalMetrics, currentP
     bearishScore += 2;
   }
 
+  // 7. Volume bonus (Weighted 2) - NOT MANDATORY
+  // Strong volume adds confidence but missing volume doesn't block the signal
+  if (metrics.volumeSignal === 'STRONG') {
+    if (metrics.trend === 'BULLISH') bullishScore += 2;
+    if (metrics.trend === 'BEARISH') bearishScore += 2;
+  }
+
   let type: 'CALL' | 'PUT' | 'WAIT' = 'WAIT';
   let confidence = 0;
 
-  // WINNING TRADES REQUIREMENT
-  // Score 7+ = solid trade, Score 9+ = high conviction trade
-  // Volume + Trend alignment + Support/Resistance = winning combination
-  const MIN_SCORE = 7;
+  // RELAXED SCORING - Allow signals with trend + MACD confirmation
+  // Min score 4 = trend + MACD (can generate signals)
+  // Score 7+ = trend + MACD + other confirmations (high confidence)
+  const MIN_SCORE = 4;
 
   if (bullishScore >= MIN_SCORE && bullishScore > bearishScore) {
     type = 'CALL';
-    // Score 7-18 to confidence 75-99
-    confidence = 75 + Math.round(((bullishScore - MIN_SCORE) / (18 - MIN_SCORE)) * 24);
+    // Score 4-18 to confidence 70-99
+    confidence = 70 + Math.round(((bullishScore - MIN_SCORE) / (18 - MIN_SCORE)) * 29);
   } else if (bearishScore >= MIN_SCORE && bearishScore > bullishScore) {
     type = 'PUT';
-    confidence = 75 + Math.round(((bearishScore - MIN_SCORE) / (18 - MIN_SCORE)) * 24);
+    confidence = 70 + Math.round(((bearishScore - MIN_SCORE) / (18 - MIN_SCORE)) * 29);
   }
 
   return { type, confidence };
