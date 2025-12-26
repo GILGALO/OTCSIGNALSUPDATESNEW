@@ -136,15 +136,15 @@ export class PocketOptionBrowserClient {
           '--no-first-run',
           '--no-zygote',
           '--single-process',
-          '--js-flags="--max-old-space-size=300"',
+          '--js-flags="--max-old-space-size=200"', // Reduced to 200MB
           '--mute-audio',
           '--disable-breakpad',
           '--disable-canvas-aa',
           '--disable-2d-canvas-clip-aa',
-          '--disable-gl-drawing-for-tests'
+          '--disable-gl-drawing-for-tests',
+          '--disable-features=Translate,PasswordImport,Autofill', // Extra memory savings
         ],
         protocolTimeout: 300000,
-        // Increase wait time for browser endpoint
         timeout: 60000, 
       });
 
