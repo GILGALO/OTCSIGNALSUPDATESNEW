@@ -1,0 +1,33 @@
+Running 'npm run start'
+> rest-express@1.0.0 start
+> NODE_ENV=production node dist/index.cjs
+⚠️ DATABASE_URL not set, using in-memory storage
+5:09:36 AM [express] Server running on port 10000
+🔍 [SIGNAL] Starting scan for EUR/USD (Source: MANUAL)
+🔄 [POCKET OPTION] Requesting REAL data for EUR/USD...
+🔧 Browser Client initialized (Email: YES, SSID: YES)
+🌐 Launching singleton headless browser...
+📱 Navigating to Pocket Option...
+❌ Connection failed: TimeoutError: Navigation timeout of 60000 ms exceeded
+    at new Deferred (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/util/Deferred.js:60:34)
+    at Deferred.create (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/util/Deferred.js:21:16)
+    at new LifecycleWatcher (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/cdp/LifecycleWatcher.js:73:60)
+    at CdpFrame.goto (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/cdp/Frame.js:149:29)
+    at CdpFrame.<anonymous> (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/util/decorators.js:109:27)
+    at CdpPage.goto (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/api/Page.js:572:43)
+    at t.connect (/opt/render/project/src/dist/index.cjs:70:104959)
+    at async Bw (/opt/render/project/src/dist/index.cjs:70:107877)
+    at async Xd.getM5Candles (/opt/render/project/src/dist/index.cjs:70:108112)
+    at async /opt/render/project/src/dist/index.cjs:91:5995
+📱 Navigating to Pocket Option...
+/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/util/assert.js:18
+        throw new Error(message);
+              ^
+Error: Request is already handled!
+    at assert (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/util/assert.js:18:15)
+    at CdpHTTPRequest.verifyInterception (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/api/HTTPRequest.js:170:32)
+    at CdpHTTPRequest.continue (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/api/HTTPRequest.js:201:14)
+    at /opt/render/project/src/dist/index.cjs:70:104882
+    at /opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/api/Page.js:222:32
+    at async CdpHTTPRequest.finalizeInterceptions (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/api/HTTPRequest.js:148:9)
+Node.js v22.16.0

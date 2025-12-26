@@ -110,20 +110,25 @@ export class PocketOptionBrowserClient {
       this.page = pages[0] || await this.browser.newPage();
       await this.page.setViewport({ width: 1280, height: 800 });
       
+      // Clear previous listeners to avoid "Request is already handled" error
+      this.page.removeAllListeners('request');
       await this.page.setRequestInterception(true);
+      
       this.page.on('request', (req) => {
+        if (req.isInterceptResolutionHandled()) return;
+        
         const type = req.resourceType();
         if (['image', 'media', 'font', 'stylesheet', 'other'].includes(type)) {
-          req.abort();
+          req.abort().catch(() => {});
         } else {
-          req.continue();
+          req.continue().catch(() => {});
         }
       });
 
       console.log('📱 Navigating to Pocket Option...');
       await this.page.goto('https://pocketoption.com/en/login', {
-        waitUntil: 'networkidle2',
-        timeout: 60000
+        waitUntil: 'domcontentloaded', // Faster than networkidle2
+        timeout: 90000 // Increased timeout for Render
       });
 
       if (this.email && this.password) {
@@ -156,7 +161,7 @@ export class PocketOptionBrowserClient {
         document.cookie = `sessionid=${ssid}; path=/;`;
       }, this.ssid);
 
-      await this.page.reload({ waitUntil: 'networkidle2' }).catch(() => null);
+      await this.page.reload({ waitUntil: 'domcontentloaded' }).catch(() => null);
       await new Promise(resolve => setTimeout(resolve, 2000));
     } catch (error) {
       console.error('Auth error:', error);
@@ -168,7 +173,7 @@ export class PocketOptionBrowserClient {
     
     try {
       console.log('🔑 Entering credentials...');
-      await this.page.waitForSelector('input[name="email"]', { timeout: 10000 }).catch(() => null);
+      await this.page.waitForSelector('input[name="email"]', { timeout: 15000 }).catch(() => null);
       
       const emailInput = await this.page.$('input[name="email"]') || 
                          await this.page.$('input[type="email"]') ||
@@ -177,7 +182,7 @@ export class PocketOptionBrowserClient {
       if (emailInput) {
         await emailInput.click({ clickCount: 3 });
         await emailInput.press('Backspace');
-        await emailInput.type(this.email, { delay: 100 });
+        await emailInput.type(this.email, { delay: 50 });
       }
 
       const passInput = await this.page.$('input[name="password"]') || 
@@ -185,7 +190,7 @@ export class PocketOptionBrowserClient {
                         await this.page.$('[placeholder*="Password"]');
       
       if (passInput) {
-        await passInput.type(this.password, { delay: 100 });
+        await passInput.type(this.password, { delay: 50 });
       }
 
       const submitBtn = await this.page.$('button[type="submit"]') || 
@@ -194,7 +199,7 @@ export class PocketOptionBrowserClient {
       
       if (submitBtn) {
         await submitBtn.click();
-        await this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => null);
+        await this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => null);
       }
     } catch (error) {
       console.error('Credential auth error:', error);
@@ -209,12 +214,15 @@ export class PocketOptionBrowserClient {
 
     try {
       const tradingUrl = `https://pocketoption.com/en/otc/trade/${symbol.replace('/', '_')}`;
+      console.log(`🔗 Loading Chart: ${tradingUrl}`);
+      
       await this.page!.goto(tradingUrl, {
-        waitUntil: 'networkidle2',
+        waitUntil: 'domcontentloaded',
         timeout: 90000,
       }).catch(() => null);
 
-      await new Promise(resolve => setTimeout(resolve, 10000));
+      // Wait for data to populate
+      await new Promise(resolve => setTimeout(resolve, 15000));
 
       const candles = await this.page!.evaluate(() => {
         const windowGlobals = (window as any);
@@ -222,7 +230,8 @@ export class PocketOptionBrowserClient {
           windowGlobals.TradingApp?.chart?.candles,
           windowGlobals.TradingApp?.chart?.history,
           windowGlobals.__STORE__?.getState?.()?.chart?.candles,
-          windowGlobals.PoChart?.candles
+          windowGlobals.PoChart?.candles,
+          windowGlobals.state?.candles
         ];
 
         for (const data of dataStructures) {
@@ -240,6 +249,10 @@ export class PocketOptionBrowserClient {
         return [];
       });
 
+      if (candles.length === 0) {
+        console.warn('⚠️ No candle data extracted from page globals');
+      }
+
       return candles.length > 0 ? candles.slice(-count) : [];
     } catch (error) {
       console.error(`❌ Data fetch error: ${error}`);
@@ -252,8 +265,8 @@ export class PocketOptionBrowserClient {
   }
 
   async close(): Promise<void> {
-    // Only close the page, not the browser singleton
     if (this.page) {
+      this.page.removeAllListeners('request');
       await this.page.close().catch(() => null);
       this.page = null;
     }
@@ -276,9 +289,7 @@ export async function getPocketOptionBrowserClient(
 }
 
 export function closeBrowserClient(): void {
-  // We keep the singleton alive to avoid re-launch overhead
   if (globalBrowser) {
     globalBrowser.close();
-    // Don't nullify globalBrowser to maintain singleton state
   }
 }
