@@ -1,6 +1,7 @@
-// Pocket Option API Client - REAL Live Market Data ONLY via Browser Automation
+// Pocket Option API Client - REAL Live Market Data ONLY
 // NO DEMO DATA - Only real market data from Pocket Option
 
+import { createPocketOptionAPIClient } from './pocket-option-api';
 import { getPocketOptionBrowserClient } from './pocket-option-browser';
 
 interface CandleData {
@@ -25,6 +26,24 @@ export class PocketOptionClient {
 
   async getM5Candles(symbol: string, count: number = 50): Promise<CandleData[]> {
     console.log(`🔄 [POCKET OPTION] Requesting REAL market data for ${symbol}...`);
+    
+    // Try direct API first (faster, more reliable)
+    if (this.ssid) {
+      try {
+        console.log('📡 Trying direct API...');
+        const apiClient = createPocketOptionAPIClient(this.ssid);
+        const candles = await apiClient.getM5Candles(symbol, count);
+        if (candles.length >= 26) {
+          console.log(`✅ Got ${candles.length} candles via direct API`);
+          return candles;
+        }
+      } catch (apiError) {
+        console.log(`⚠️ Direct API failed, falling back to browser automation...`);
+      }
+    }
+
+    // Fallback to browser automation
+    console.log('🌐 Using browser automation...');
     const client = await getPocketOptionBrowserClient(this.ssid || "", this.email, this.password);
     const candles = await client.getM5Candles(symbol, count);
     
