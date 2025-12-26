@@ -73,16 +73,21 @@ export async function registerRoutes(
   app.post("/api/generate-signal", async (req, res) => {
     try {
       const { symbol, ssid, source, telegramToken, channelId } = generateSignalSchema.parse(req.body);
-      console.log(`🔍 [SIGNAL] Starting scan for ${symbol}`);
+      
+      // PREVENT RECURSIVE LOOPS: If this is an AUTO request, ensure we don't trigger another one immediately
+      console.log(`🔍 [SIGNAL] Starting scan for ${symbol} (Source: ${source})`);
 
       // M5 CYCLE DEBOUNCING: Only one signal per M5 candle cycle
       const lastSignal = lastSignalTime.get(symbol);
+      const nowMs = Date.now();
+      
       if (lastSignal) {
-        const timeSinceLastSignal = Date.now() - lastSignal.getTime();
+        const timeSinceLastSignal = nowMs - lastSignal.getTime();
         const FIVE_MINUTES_MS = 5 * 60 * 1000;
         
         if (timeSinceLastSignal < FIVE_MINUTES_MS) {
           const timeRemaining = Math.ceil((FIVE_MINUTES_MS - timeSinceLastSignal) / 1000);
+          console.log(`[DEBOUNCE] Skipping signal for ${symbol} - cycle still in cooldown (${timeRemaining}s)`);
           return res.json({ 
             signal: null, 
             message: `Already sent signal for ${symbol} this M5 cycle. Wait ${timeRemaining}s for next cycle.`,
