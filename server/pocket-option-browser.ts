@@ -23,11 +23,11 @@ export class PocketOptionBrowserClient {
   private isConnected = false;
   private lastAccess = Date.now();
 
-  constructor(ssid: string, email?: string, password?: string) {
+  constructor(ssid?: string, email?: string, password?: string) {
     this.ssid = ssid || null;
-    this.email = email || null;
-    this.password = password || null;
-    console.log(`🔧 Browser Client initialized (Email: ${this.email ? 'YES' : 'NO'}, SSID: ${this.ssid ? 'YES' : 'NO'})`);
+    this.email = email || process.env.POCKET_OPTION_EMAIL || null;
+    this.password = password || process.env.POCKET_OPTION_PASSWORD || null;
+    console.log(`🔧 Browser Client initialized (Email: ${this.email ? 'YES (Env/Input)' : 'NO'}, SSID: ${this.ssid ? 'YES' : 'NO'})`);
   }
 
   private async getBrowser(): Promise<Browser> {

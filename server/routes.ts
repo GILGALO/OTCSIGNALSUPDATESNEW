@@ -11,7 +11,7 @@ import { scheduleSignalSend, getSignalSendTime, calculateM5CandleEntryTime } fro
 // Request validation schemas
 const generateSignalSchema = z.object({
   symbol: z.string().min(1),
-  ssid: z.string().min(1),
+  ssid: z.string().optional(),
   email: z.string().optional(),
   password: z.string().optional(),
   source: z.enum(["AUTO", "MANUAL"]).default("AUTO"),
@@ -20,7 +20,7 @@ const generateSignalSchema = z.object({
 });
 
 const validateSSIDSchema = z.object({
-  ssid: z.string().min(1),
+  ssid: z.string().optional(),
   email: z.string().optional(),
   password: z.string().optional(),
 });
