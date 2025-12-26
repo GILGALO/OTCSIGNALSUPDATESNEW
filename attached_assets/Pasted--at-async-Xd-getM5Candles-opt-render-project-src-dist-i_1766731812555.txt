@@ -1,0 +1,30 @@
+ at async Xd.getM5Candles (/opt/render/project/src/dist/index.cjs:70:108661)
+    at async /opt/render/project/src/dist/index.cjs:91:7214
+📱 Navigating to Pocket Option...
+🔑 Entering credentials...
+🔑 Entering credentials...
+⚠️ No candle data extracted from page globals
+⚠️ [POCKET OPTION] No candles returned for AUD/JPY, trying demo fallback...
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] AUD/JPY: type=WAIT, confidence=0%, trend=NEUTRAL, adx=11.8
+✅ Browser connected
+🔗 Loading Chart: https://pocketoption.com/en/otc/trade/CHF_JPY
+✅ Browser connected
+🔗 Loading Chart: https://pocketoption.com/en/otc/trade/CHF_JPY
+⚠️ No candle data extracted from page globals
+⚠️ [POCKET OPTION] No candles returned for CHF/JPY, trying demo fallback...
+📊 Generating REALISTIC trending demo candles for signal testing...
+✅ Generated 26 REALISTIC trending demo candles (direction: BULLISH)
+📊 [SIGNAL] CHF/JPY: type=CALL, confidence=85%, trend=BULLISH, adx=100.0
+[TELEGRAM] Sending signal demo-emqu7fn19 IMMEDIATELY (generated just now)
+⚠️ [POCKET OPTION] No candles returned for CHF/JPY, trying demo fallback...
+⚠️ No candle data extracted from page globals
+📊 Generating REALISTIC trending demo candles for signal testing...
+✅ Generated 26 REALISTIC trending demo candles (direction: BEARISH)
+📊 [SIGNAL] CHF/JPY: type=PUT, confidence=80%, trend=BEARISH, adx=100.0
+[TELEGRAM] Sending signal demo-2q9jexwvq IMMEDIATELY (generated just now)
+[TELEGRAM] Signal sent immediately but failed to update DB: Error: Database not available
+6:47:18 AM [express] POST /api/generate-signal 200 in 117356ms :: {"signal":{"id":"demo-emqu7fn19","type":"CALL","source":"AUTO","confidence":85,"entryPrice":1.1061832440753245,"stopLoss":0.9561832440753245,"takeProfit":1.4061832440753246,"entryTime":"2025-12-26T06:50:00.000Z","expiryTime":"2025-12-26T06:55:00.000Z","technicals":{"rsi":95.07491453037092,"macdLine":0.020632834473250483,"macdSignal":0.020632834473250483,"macdHistogram":0,"sma20":1.0618595825702024,"sma50":1.1061832440753245,"ema12":1.0791308997458389,"ema26":1.0584980652725884,"stochasticK":83.20175348836378,"stochasticD":83.20175348836378,"adx":100,"trend":"BULLISH","momentum":"STRONG","volumeSignal":"STRONG","volatility":0.019701347183816015,"priceLevel":"RESISTANCE"},"scheduledSendTime":"2025-12-26T06:47:18.225Z"},"telegram":{"success":true,"messageId":"7995","scheduled":false}}
+[TELEGRAM] Signal sent immediately but failed to update DB: Error: Database not available
+6:47:18 AM [express] POST /api/generate-signal 200 in 117430ms :: {"signal":{"id":"demo-2q9jexwvq","type":"PUT
