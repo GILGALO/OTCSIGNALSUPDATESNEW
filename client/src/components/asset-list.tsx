@@ -3,26 +3,85 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { TrendingUp, TrendingDown, Star } from 'lucide-react';
 
 const ASSETS = [
+  // Major Pairs
   { pair: 'EUR/USD', payout: '92%', status: 'up' },
   { pair: 'GBP/USD', payout: '88%', status: 'down' },
   { pair: 'USD/JPY', payout: '85%', status: 'up' },
-  { pair: 'AUD/CAD', payout: '82%', status: 'down' },
-  { pair: 'EUR/JPY', payout: '90%', status: 'up' },
   { pair: 'USD/CHF', payout: '78%', status: 'up' },
-  { pair: 'NZD/USD', payout: '80%', status: 'down' },
-  { pair: 'EUR/GBP', payout: '85%', status: 'up' },
-  { pair: 'GBP/JPY', payout: '87%', status: 'up' },
-  { pair: 'CAD/JPY', payout: '83%', status: 'down' },
   { pair: 'AUD/USD', payout: '89%', status: 'up' },
+  { pair: 'NZD/USD', payout: '80%', status: 'down' },
   { pair: 'CAD/USD', payout: '81%', status: 'down' },
-  { pair: 'NZD/JPY', payout: '84%', status: 'up' },
   { pair: 'USD/CAD', payout: '86%', status: 'up' },
-  { pair: 'GBP/CHF', payout: '79%', status: 'down' },
+  
+  // USD Crosses
+  { pair: 'USD/CNY', payout: '84%', status: 'up' },
+  { pair: 'USD/HKD', payout: '83%', status: 'down' },
+  { pair: 'USD/SGD', payout: '82%', status: 'up' },
+  { pair: 'USD/INR', payout: '79%', status: 'down' },
+  { pair: 'USD/MXN', payout: '81%', status: 'up' },
+  { pair: 'USD/ZAR', payout: '77%', status: 'down' },
+  { pair: 'USD/TRY', payout: '76%', status: 'up' },
+  { pair: 'USD/BRL', payout: '75%', status: 'down' },
+  
+  // EUR Crosses
+  { pair: 'EUR/GBP', payout: '85%', status: 'up' },
+  { pair: 'EUR/JPY', payout: '90%', status: 'up' },
+  { pair: 'EUR/CHF', payout: '83%', status: 'down' },
   { pair: 'EUR/CAD', payout: '88%', status: 'up' },
-  { pair: 'AUD/JPY', payout: '82%', status: 'down' },
   { pair: 'EUR/AUD', payout: '87%', status: 'up' },
+  { pair: 'EUR/NZD', payout: '84%', status: 'down' },
+  { pair: 'EUR/SEK', payout: '82%', status: 'up' },
+  { pair: 'EUR/NOK', payout: '81%', status: 'down' },
+  { pair: 'EUR/GHS', payout: '80%', status: 'up' },
+  
+  // GBP Crosses
+  { pair: 'GBP/JPY', payout: '87%', status: 'up' },
+  { pair: 'GBP/CHF', payout: '79%', status: 'down' },
   { pair: 'GBP/CAD', payout: '85%', status: 'down' },
+  { pair: 'GBP/AUD', payout: '86%', status: 'up' },
+  { pair: 'GBP/NZD', payout: '83%', status: 'down' },
+  { pair: 'GBP/SEK', payout: '81%', status: 'up' },
+  
+  // JPY Crosses
+  { pair: 'AUD/JPY', payout: '82%', status: 'down' },
+  { pair: 'CAD/JPY', payout: '83%', status: 'down' },
+  { pair: 'CHF/JPY', payout: '80%', status: 'up' },
+  { pair: 'NZD/JPY', payout: '84%', status: 'up' },
+  { pair: 'SGD/JPY', payout: '81%', status: 'down' },
+  { pair: 'HKD/JPY', payout: '79%', status: 'up' },
+  
+  // AUD Crosses
+  { pair: 'AUD/CAD', payout: '82%', status: 'down' },
   { pair: 'AUD/CHF', payout: '80%', status: 'up' },
+  { pair: 'AUD/NZD', payout: '84%', status: 'down' },
+  { pair: 'AUD/SGD', payout: '83%', status: 'up' },
+  { pair: 'AUD/HKD', payout: '82%', status: 'down' },
+  
+  // CAD Crosses
+  { pair: 'CAD/CHF', payout: '79%', status: 'up' },
+  { pair: 'CAD/AUD', payout: '81%', status: 'down' },
+  { pair: 'CAD/NZD', payout: '80%', status: 'up' },
+  
+  // NZD Crosses
+  { pair: 'NZD/CAD', payout: '83%', status: 'down' },
+  { pair: 'NZD/CHF', payout: '81%', status: 'up' },
+  { pair: 'NZD/SGD', payout: '82%', status: 'down' },
+  
+  // CHF Crosses
+  { pair: 'CHF/CAD', payout: '78%', status: 'up' },
+  { pair: 'CHF/SGD', payout: '79%', status: 'down' },
+  
+  // Other Exotic Pairs
+  { pair: 'SGD/CAD', payout: '80%', status: 'up' },
+  { pair: 'HKD/CAD', payout: '79%', status: 'down' },
+  { pair: 'SEK/USD', payout: '83%', status: 'up' },
+  { pair: 'NOK/USD', payout: '82%', status: 'down' },
+  { pair: 'ZAR/USD', payout: '80%', status: 'up' },
+  { pair: 'MXN/USD', payout: '81%', status: 'down' },
+  { pair: 'TRY/USD', payout: '78%', status: 'up' },
+  { pair: 'BRL/USD', payout: '77%', status: 'down' },
+  { pair: 'INR/USD', payout: '81%', status: 'up' },
+  { pair: 'CNY/USD', payout: '83%', status: 'down' },
 ];
 
 export function AssetList({ onSelect, selected }: { onSelect: (pair: string) => void, selected: string }) {
