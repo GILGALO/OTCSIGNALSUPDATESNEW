@@ -215,21 +215,23 @@ export class PocketOptionBrowserClient {
       const tradingUrl = `https://pocketoption.com/en/otc/trade/${symbol.replace('/', '_')}`;
       console.log(`🔗 Loading Chart: ${tradingUrl}`);
       
-      // Track API responses for candle data
+      // Track ALL API responses for debugging
       const capturedResponses: any[] = [];
+      const responseUrls: string[] = [];
+      
       const responseHandler = async (response: any) => {
         try {
           const url = response.url();
-          // Capture API calls that might contain candle data
-          if (url.includes('candle') || url.includes('chart') || url.includes('history') || url.includes('bar')) {
-            const contentType = response.headers()['content-type'] || '';
-            if (contentType.includes('application/json')) {
-              try {
-                const data = await response.json();
-                capturedResponses.push(data);
-              } catch (e) {
-                // Ignore parse errors
-              }
+          const contentType = response.headers()['content-type'] || '';
+          
+          // Capture ALL JSON responses (more aggressive)
+          if (contentType.includes('application/json') && !url.includes('analytics') && !url.includes('ga')) {
+            try {
+              const data = await response.json();
+              capturedResponses.push(data);
+              responseUrls.push(url);
+            } catch (e) {
+              // Ignore parse errors
             }
           }
         } catch (e) {
@@ -244,9 +246,28 @@ export class PocketOptionBrowserClient {
         timeout: 90000,
       }).catch(() => null);
 
-      // Wait a bit more for any delayed API calls
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      // Wait extra time for lazy-loaded chart data
+      console.log('⏳ Waiting for chart data to load...');
+      await new Promise(resolve => setTimeout(resolve, 8000));
+      
+      // Try clicking/interacting with chart to trigger data load
+      try {
+        await this.page!.evaluate(() => {
+          document.querySelectorAll('[data-testid*="chart"], canvas, .trading-chart').forEach((el: any) => {
+            if (el.click) el.click();
+          });
+        });
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      } catch (e) {
+        // Ignore interaction errors
+      }
+      
       this.page!.off('response', responseHandler);
+
+      console.log(`📊 Captured ${capturedResponses.length} API responses`);
+      if (responseUrls.length > 0) {
+        console.log(`🔗 Response URLs: ${responseUrls.slice(0, 5).join(', ')}`);
+      }
 
       // Try to extract candles from captured API responses
       for (const response of capturedResponses) {
@@ -257,7 +278,7 @@ export class PocketOptionBrowserClient {
         }
       }
 
-      // Fallback: try to extract from window globals
+      // Fallback: try to extract from window globals with aggressive search
       const candles = await this.page!.evaluate(() => {
         const windowGlobals = (window as any);
         const dataStructures = [
@@ -268,11 +289,20 @@ export class PocketOptionBrowserClient {
           windowGlobals.PoChart?.candles,
           windowGlobals.state?.candles,
           windowGlobals.chartsData?.candles,
-          // Try to find any window property that has array of candle-like objects
+          windowGlobals.chartData,
+          windowGlobals.candleData,
+          windowGlobals.ohlc,
+          windowGlobals.bars,
+          windowGlobals.prices,
+          // Try to find in any property with 'chart' or 'candle' in the name
+          ...Object.keys(windowGlobals)
+            .filter(k => k.toLowerCase().includes('chart') || k.toLowerCase().includes('candle'))
+            .map(k => windowGlobals[k]),
+          // Aggressive: search for ANY array of OHLC objects (at least 10 candles)
           Object.values(windowGlobals).find((obj: any) => 
-            Array.isArray(obj) && obj.length > 0 && 
+            Array.isArray(obj) && obj.length >= 10 && 
             obj[0]?.open && obj[0]?.close && obj[0]?.high && obj[0]?.low
-          )
+          ),
         ];
 
         for (const data of dataStructures) {

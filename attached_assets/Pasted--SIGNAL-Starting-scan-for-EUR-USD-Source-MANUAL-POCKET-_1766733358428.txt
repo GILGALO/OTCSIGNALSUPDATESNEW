@@ -1,0 +1,21 @@
+[SIGNAL] Starting scan for EUR/USD (Source: MANUAL)
+🔄 [POCKET OPTION] Requesting REAL market data for EUR/USD...
+🔧 Browser Client initialized (Email: YES (Env/Input), SSID: YES)
+🌐 Launching singleton headless browser...
+📱 Navigating to Pocket Option...
+🔑 Entering credentials...
+✅ Browser connected
+🔗 Loading Chart: https://pocketoption.com/en/otc/trade/EUR_USD
+🔍 [SIGNAL] Starting scan for GBP/USD (Source: AUTO)
+🔄 [POCKET OPTION] Requesting REAL market data for GBP/USD...
+🔗 Loading Chart: https://pocketoption.com/en/otc/trade/GBP_USD
+🚨 REAL DATA FETCH FAILED: ❌ Pocket Option data extraction failed for EUR/USD:
+Failed to extract real market data for EUR/USD from Pocket Option.
+Neither API responses nor window globals contained candle data.
+This usually means: credentials are invalid, page didn't load properly, or symbol doesn't exist.
+7:15:08 AM [express] POST /api/generate-signal 400 in 183470ms :: {"error":"Real market data unavailable","details":"❌ Pocket Option data extraction failed for EUR/USD:\nFailed to extract real market data for EUR/USD from Pocket Option.\nNeither API responses nor window globals contained candle data.\nThis usually means: credentials are invalid, page didn't load properly, or symbol doesn't exist.","message":"Unable to fetch real market data. Please verify your SSID is valid and Pocket Option is accessible."}
+🚨 REAL DATA FETCH FAILED: ❌ Pocket Option data extraction failed for GBP/USD:
+Failed to extract real market data for GBP/USD from Pocket Option.
+Neither API responses nor window globals contained candle data.
+This usually means: credentials are invalid, page didn't load properly, or symbol doesn't exist.
+7:15:32 AM [express] POST /api/generate-signal 400 in 95105ms :: {"error":"Real market data unavailable","details":"❌ Pocket Option data extraction failed for GBP/USD:\nFailed to extract real market data for GBP/USD from Pocket Option.\nNeither API responses nor window globals contained candle data.\nThis usually means: credentials are invalid, page didn't load properly, or symbol doesn't exist.","message":"Unable to fetch real market data. Please verify your SSID is valid and Pocket Option is accessible."}
