@@ -146,17 +146,38 @@ export class PocketOptionBrowserClient {
     if (!this.page || !this.ssid) return;
     
     try {
+      console.log('🔐 Setting SSID authentication...');
       await this.page.evaluate((ssid) => {
         localStorage.setItem('POAPI_SESSION', ssid);
         localStorage.setItem('sessionid', ssid);
+        localStorage.setItem('poapi_token', ssid);
         sessionStorage.setItem('POAPI_SESSION', ssid);
-        document.cookie = `POAPI_SESSION=${ssid}; path=/;`;
+        sessionStorage.setItem('sessionid', ssid);
+        document.cookie = `POAPI_SESSION=${ssid}; path=/; SameSite=Lax`;
+        document.cookie = `sessionid=${ssid}; path=/; SameSite=Lax`;
       }, this.ssid);
 
-      await this.page.reload({ waitUntil: 'domcontentloaded' }).catch(() => null);
+      console.log('✓ SSID set in storage and cookies');
+      
+      // Navigate to trading page to verify SSID works
+      await this.page.goto('https://pocketoption.com/en/otc/trade/EUR_USD', {
+        waitUntil: 'domcontentloaded',
+        timeout: 45000
+      }).catch(() => null);
+      
+      const pageUrl = this.page.url();
+      const pageTitle = await this.page.title();
+      console.log(`📄 Post-SSID: Title="${pageTitle}", URL="${pageUrl}"`);
+      
+      if (!pageUrl.includes('login')) {
+        console.log('✅ SSID authentication appears successful');
+      } else {
+        console.warn('⚠️ SSID may be invalid - still on login page');
+      }
+      
       await new Promise(resolve => setTimeout(resolve, 2000));
     } catch (error) {
-      console.error('Auth error:', error);
+      console.error('❌ SSID auth error:', error);
     }
   }
 
@@ -165,25 +186,76 @@ export class PocketOptionBrowserClient {
     
     try {
       console.log('🔑 Entering credentials...');
-      await this.page.waitForSelector('input[type="email"]', { timeout: 15000 }).catch(() => null);
       
-      const emailInput = await this.page.$('input[type="email"]');
+      // Wait for email input field
+      await this.page.waitForSelector('input[type="email"], input[placeholder*="email"], input[name*="email"]', { timeout: 15000 }).catch(() => null);
+      
+      // Find and fill email field
+      const emailInput = await this.page.$('input[type="email"], input[placeholder*="email"], input[name*="email"]');
       if (emailInput) {
-        await emailInput.type(this.email, { delay: 50 });
+        await emailInput.click();
+        await emailInput.evaluate((el: HTMLInputElement) => el.value = '');
+        await emailInput.type(this.email, { delay: 30 });
+        console.log('✓ Email entered');
+      } else {
+        console.warn('⚠️ Email input not found');
       }
 
-      const passInput = await this.page.$('input[type="password"]');
+      // Find and fill password field
+      const passInput = await this.page.$('input[type="password"], input[placeholder*="password"], input[name*="password"]');
       if (passInput) {
-        await passInput.type(this.password, { delay: 50 });
+        await passInput.click();
+        await passInput.evaluate((el: HTMLInputElement) => el.value = '');
+        await passInput.type(this.password, { delay: 30 });
+        console.log('✓ Password entered');
+      } else {
+        console.warn('⚠️ Password input not found');
       }
 
-      const submitBtn = await this.page.$('button[type="submit"]');
+      // Find and click submit button - try multiple selectors
+      let submitBtn = await this.page.$('button[type="submit"]');
+      if (!submitBtn) {
+        submitBtn = await this.page.$('button');
+      }
+      if (!submitBtn) {
+        const allButtons = await this.page.$$('button');
+        for (const btn of allButtons) {
+          const text = await btn.evaluate(el => el.textContent?.toLowerCase());
+          if (text && (text.includes('login') || text.includes('sign in') || text.includes('enter'))) {
+            submitBtn = btn;
+            break;
+          }
+        }
+      }
+
       if (submitBtn) {
+        console.log('🔐 Clicking login button...');
         await submitBtn.click();
-        await this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => null);
+        
+        // Wait for navigation or page change
+        try {
+          await this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 45000 });
+          console.log('✓ Login navigation complete');
+        } catch (navErr) {
+          console.log('⚠️ Navigation timeout (page may have loaded without redirect)');
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+        
+        // Verify login succeeded by checking page title or URL
+        const pageTitle = await this.page.title();
+        const pageUrl = this.page.url();
+        console.log(`📄 Post-login: Title="${pageTitle}", URL="${pageUrl}"`);
+        
+        if (pageUrl.includes('dashboard') || pageUrl.includes('trading') || !pageUrl.includes('login')) {
+          console.log('✅ Login appears successful');
+        } else {
+          console.warn('⚠️ May still be on login page - check credentials');
+        }
+      } else {
+        console.warn('⚠️ Login button not found');
       }
     } catch (error) {
-      console.error('Credential auth error:', error);
+      console.error('❌ Credential auth error:', error);
     }
   }
 
