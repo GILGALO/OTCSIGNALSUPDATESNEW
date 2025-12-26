@@ -158,8 +158,8 @@ export class PocketOptionBrowserClient {
         try {
           console.log(`📱 Navigating to Pocket Option (Attempt ${i+1}/${maxRetries+1})...`);
           await this.page.goto('https://pocketoption.com/en/login', {
-            waitUntil: 'domcontentloaded', 
-            timeout: 60000,
+            waitUntil: 'networkidle2', // Wait for network to be quiet
+            timeout: 90000, // Increase to 90 seconds
           });
           break; // Success
         } catch (gotoError) {
@@ -167,7 +167,7 @@ export class PocketOptionBrowserClient {
             console.warn('⚠️ All initial navigation attempts timed out, trying to proceed anyway...');
           } else {
             console.warn(`⚠️ Navigation attempt ${i+1} failed, retrying...`);
-            await new Promise(r => setTimeout(r, 2000));
+            await new Promise(r => setTimeout(r, 5000));
           }
         }
       }
@@ -251,16 +251,16 @@ export class PocketOptionBrowserClient {
       
       try {
         await this.page!.goto(tradingUrl, {
-          waitUntil: 'domcontentloaded',
-          timeout: 45000,
+          waitUntil: 'networkidle2',
+          timeout: 120000, // 2 minutes for slow OTC loads
         });
       } catch (pageError) {
         console.warn(`⚠️ Navigation to ${tradingUrl} timed out, checking if content loaded anyway...`);
       }
 
-      console.log(`⏳ Waiting for chart to fully render (45 seconds)...`);
+      console.log(`⏳ Waiting for chart to fully render (60 seconds)...`);
       // Maximum wait time for slow OTC chart loads on Render
-      await new Promise(resolve => setTimeout(resolve, 45000));
+      await new Promise(resolve => setTimeout(resolve, 60000));
 
       // Extract REAL candle data from the page
       const candles = await this.page!.evaluate((sym: string) => {
