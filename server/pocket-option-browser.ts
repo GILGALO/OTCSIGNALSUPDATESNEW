@@ -222,9 +222,9 @@ export class PocketOptionBrowserClient {
         console.warn(`⚠️ Navigation to ${tradingUrl} timed out, checking if content loaded anyway...`);
       }
 
-      console.log(`⏳ Waiting for chart to render (5 seconds)...`);
-      // Reduced wait time but added check for specific elements
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      console.log(`⏳ Waiting for chart to fully render (45 seconds)...`);
+      // Maximum wait time for slow OTC chart loads on Render
+      await new Promise(resolve => setTimeout(resolve, 45000));
 
       // Extract REAL candle data from the page
       const candles = await this.page!.evaluate((sym: string) => {
@@ -242,6 +242,17 @@ export class PocketOptionBrowserClient {
           windowGlobals.__APP__?.state?.chart?.candles,
           windowGlobals.__CHART__?.data,
           windowGlobals.state?.candles,
+          // NEW: Pocket Option v2 data structure
+          windowGlobals.po?.chart?.data,
+          windowGlobals.PoChart?.candles,
+          // Extra fallbacks for different builds
+          windowGlobals.tradingApp?.candles,
+          windowGlobals.app?.candles,
+          // High-probability fallbacks
+          windowGlobals.candles,
+          windowGlobals.history,
+          windowGlobals.chart?.candles,
+          windowGlobals.chart?.history
         ];
 
         for (const data of dataStructures) {
@@ -249,8 +260,8 @@ export class PocketOptionBrowserClient {
             const mapped = data.map((c: any) => {
               if (!c || typeof c !== 'object') return null;
               // Normalize different candle formats
-              const timestamp = c.time || c.timestamp || c.t || c.date || Date.now();
-              const open = c.open || c.o || c.openPrice || c.price || 0;
+              const timestamp = c.time || c.timestamp || c.t || c.date || c.dt || Date.now();
+              const open = c.open || c.o || c.openPrice || c.price || c.p || 0;
               const close = c.close || c.c || c.closePrice || 0;
               const high = c.high || c.h || c.highPrice || Math.max(parseFloat(open as string), parseFloat(close as string));
               const low = c.low || c.l || c.lowPrice || Math.min(parseFloat(open as string), parseFloat(close as string));
@@ -274,7 +285,9 @@ export class PocketOptionBrowserClient {
         // Strategy 2: Improved visible price extraction
         const priceSelectors = [
           '.current-price', '.price-value', '[class*="price"]', 
-          '.candle-container', '.chart-container'
+          '.candle-container', '.chart-container', '.po-chart-price',
+          '[data-testid="current-price"]', '.trading-chart-price',
+          '.asset-price', '.price-now'
         ];
         
         let foundPrice = 0;

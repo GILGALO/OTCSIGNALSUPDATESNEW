@@ -1,0 +1,61 @@
+
+1. Pocket Option website is accessible
+2. Your SSID is valid
+3. The chart page is loading correctly
+⚠️ Real market unavailable: Error: ❌ FAILED: No real market data available for EUR/USD. Please verify:
+1. Pocket Option website is accessible
+2. Your SSID is valid
+3. The chart page is loading correctly. Using demo data.
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] EUR/USD: type=WAIT, confidence=0%, trend=NEUTRAL, adx=71.4
+12:38:33 AM [express] POST /api/generate-signal 200 in 102649ms :: {"signal":null,"message":"No clear directional signal detected. Market is neutral.","confidence":0,"minimumRequired":60}
+📊 Fetching REAL market data for GBP/USD...
+🔗 Loading: https://pocketoption.com/en/otc/trade/GBP_USD
+⏳ Waiting for chart to render (5 seconds)...
+❌ DATA FETCH ERROR: ❌ FAILED: No real market data available for GBP/USD. Please verify:
+1. Pocket Option website is accessible
+2. Your SSID is valid
+3. The chart page is loading correctly
+⚠️ Real market unavailable: Error: ❌ FAILED: No real market data available for GBP/USD. Please verify:
+1. Pocket Option website is accessible
+2. Your SSID is valid
+3. The chart page is loading correctly. Using demo data.
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] GBP/USD: type=WAIT, confidence=0%, trend=NEUTRAL, adx=12.5
+12:38:48 AM [express] POST /api/generate-signal 200 in 18165ms :: {"signal":null,"message":"No clear directional signal detected. Market is neutral.","confidence":0,"minimumRequired":60}
+==> Running 'npm run start'
+> rest-express@1.0.0 start
+> NODE_ENV=production node dist/index.cjs
+⚠️ DATABASE_URL not set, using in-memory storage
+12:39:18 AM [express] Server running on port 10000
+🔍 [SIGNAL] Starting scan for USD/JPY (Source: MANUAL)
+🔄 Attempting to fetch REAL market data for USD/JPY...
+🌐 Launching headless browser for Pocket Option...
+🚀 Running on Render, looking for installed Chrome...
+📍 Found Chrome at: /opt/render/project/.cache/puppeteer/chrome/linux-143.0.7499.169/chrome-linux64/chrome
+📱 Navigating to Pocket Option...
+🔐 Attempting authentication with SSID...
+⏳ Waiting for session to initialize (5 seconds)...
+✅ Connected to Pocket Option
+📊 Fetching REAL market data for USD/JPY...
+🔗 Loading: https://pocketoption.com/en/otc/trade/USD_JPY
+⏳ Waiting for chart to render (5 seconds)...
+❌ DATA FETCH ERROR: ❌ FAILED: No real market data available for USD/JPY. Please verify:
+1. Pocket Option website is accessible
+2. Your SSID is valid
+3. The chart page is loading correctly
+⚠️ Real market unavailable: Error: ❌ FAILED: No real market data available for USD/JPY. Please verify:
+1. Pocket Option website is accessible
+2. Your SSID is valid
+3. The chart page is loading correctly. Using demo data.
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] USD/JPY: type=WAIT, confidence=0%, trend=NEUTRAL, adx=57.9
+12:41:12 AM [express] POST /api/generate-signal 200 in 109643ms :: {"signal":null,"message":"No clear directional signal detected. Market is neutral.","confidence":0,"minimumRequired":60}
+==> Running 'npm run start'
+> rest-express@1.0.0 start
+> NODE_ENV=production node dist/index.cjs
+⚠️ DATABASE_URL not set, using in-memory storage
+12:41:44 AM [express] Server running on port 10000
