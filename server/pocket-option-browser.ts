@@ -16,10 +16,14 @@ export class PocketOptionBrowserClient {
   private browser: Browser | null = null;
   private page: Page | null = null;
   private ssid: string;
+  private email?: string;
+  private password?: string;
   private isConnected = false;
 
-  constructor(ssid: string) {
+  constructor(ssid: string, email?: string, password?: string) {
     this.ssid = ssid;
+    this.email = email;
+    this.password = password;
   }
 
   async connect(): Promise<boolean> {
@@ -178,11 +182,14 @@ export class PocketOptionBrowserClient {
       if (this.ssid && this.ssid.length > 5) {
         console.log('🔐 Attempting authentication with SSID...');
         await this.authenticateWithSSID();
-        
-        // Extended wait after authentication and reload
-        console.log('⏳ Waiting for session to initialize (5 seconds)...');
-        await new Promise(resolve => setTimeout(resolve, 5000));
+      } else if (this.email && this.password) {
+        console.log(`🔐 Attempting authentication with Email: ${this.email}...`);
+        await this.authenticateWithCredentials();
       }
+
+      // Extended wait after authentication and reload
+      console.log('⏳ Waiting for session to initialize (5 seconds)...');
+      await new Promise(resolve => setTimeout(resolve, 5000));
 
       // Check if we are logged in by looking for common protected elements
       const isLoggedIn = await this.page.evaluate(() => {
@@ -194,7 +201,7 @@ export class PocketOptionBrowserClient {
         return !bodyText.includes('Login') && 
                !bodyText.includes('Sign in') &&
                !has2FA &&
-               (document.cookie.includes('session') || localStorage.getItem('sessionid') !== null);
+               (document.cookie.includes('session') || localStorage.getItem('sessionid') !== null || document.body.innerHTML.includes('balance'));
       });
 
       if (!isLoggedIn) {
@@ -232,6 +239,49 @@ export class PocketOptionBrowserClient {
       await new Promise(resolve => setTimeout(resolve, 2000));
     } catch (error) {
       console.error('Auth error:', error);
+    }
+  }
+
+  private async authenticateWithCredentials(): Promise<void> {
+    if (!this.page || !this.email || !this.password) return;
+    
+    try {
+      console.log('🔑 Entering credentials...');
+      
+      // Wait for login fields
+      await this.page.waitForSelector('input[name="email"]', { timeout: 10000 }).catch(() => null);
+      
+      // Try to find email input
+      const emailInput = await this.page.$('input[name="email"]') || 
+                         await this.page.$('input[type="email"]') ||
+                         await this.page.$('[placeholder*="Email"]');
+      
+      if (emailInput) {
+        await emailInput.click({ clickCount: 3 });
+        await emailInput.press('Backspace');
+        await emailInput.type(this.email, { delay: 100 });
+      }
+
+      const passInput = await this.page.$('input[name="password"]') || 
+                        await this.page.$('input[type="password"]') ||
+                        await this.page.$('[placeholder*="Password"]');
+      
+      if (passInput) {
+        await passInput.type(this.password, { delay: 100 });
+      }
+
+      // Find and click submit
+      const submitBtn = await this.page.$('button[type="submit"]') || 
+                        await this.page.$('.btn-primary') ||
+                        await this.page.$('button:not([disabled])');
+      
+      if (submitBtn) {
+        await submitBtn.click();
+        console.log('🔘 Submit clicked, waiting for navigation...');
+        await this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => null);
+      }
+    } catch (error) {
+      console.error('Credential auth error:', error);
     }
   }
 
@@ -438,14 +488,16 @@ export class PocketOptionBrowserClient {
 let globalBrowser: PocketOptionBrowserClient | null = null;
 
 export async function getPocketOptionBrowserClient(
-  ssid: string
+  ssid: string,
+  email?: string,
+  password?: string
 ): Promise<PocketOptionBrowserClient> {
   // Reuse global instance if available
   if (globalBrowser) {
     return globalBrowser;
   }
 
-  const client = new PocketOptionBrowserClient(ssid);
+  const client = new PocketOptionBrowserClient(ssid, email, password);
   const connected = await client.connect();
   
   if (!connected) {

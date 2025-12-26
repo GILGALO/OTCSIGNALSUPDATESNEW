@@ -14,15 +14,19 @@ interface CandleData {
 
 export class PocketOptionClient {
   private ssid: string;
+  private email?: string;
+  private password?: string;
 
-  constructor(ssid: string) {
+  constructor(ssid: string, email?: string, password?: string) {
     this.ssid = ssid;
+    this.email = email;
+    this.password = password;
   }
 
   async getM5Candles(symbol: string, count: number = 50): Promise<CandleData[]> {
     try {
       console.log(`🔄 [POCKET OPTION] Requesting REAL data for ${symbol}...`);
-      const client = await getPocketOptionBrowserClient(this.ssid);
+      const client = await getPocketOptionBrowserClient(this.ssid, this.email, this.password);
       const candles = await client.getM5Candles(symbol, count);
       
       if (candles && candles.length > 0) {
@@ -121,6 +125,6 @@ export class PocketOptionClient {
   }
 }
 
-export function createPocketOptionClient(ssid: string): PocketOptionClient {
-  return new PocketOptionClient(ssid);
+export function createPocketOptionClient(ssid: string, email?: string, password?: string): PocketOptionClient {
+  return new PocketOptionClient(ssid, email, password);
 }

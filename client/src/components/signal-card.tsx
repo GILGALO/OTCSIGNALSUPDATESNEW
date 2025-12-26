@@ -99,6 +99,8 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
 
       const telegramToken = localStorage.getItem('telegram_bot_token');
       const channelId = localStorage.getItem('telegram_channel_id');
+      const email = localStorage.getItem('pocket_option_email');
+      const password = localStorage.getItem('pocket_option_password');
 
       // Scan each asset for a strong signal
       let validScans = 0;
@@ -116,6 +118,8 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
             body: JSON.stringify({
               symbol: asset,
               ssid,
+              email: email || undefined,
+              password: password || undefined,
               source: mode,
               telegramToken: telegramToken || undefined,
               channelId: channelId || undefined,

@@ -12,6 +12,8 @@ import { scheduleSignalSend, getSignalSendTime, calculateM5CandleEntryTime } fro
 const generateSignalSchema = z.object({
   symbol: z.string().min(1),
   ssid: z.string().min(1),
+  email: z.string().optional(),
+  password: z.string().optional(),
   source: z.enum(["AUTO", "MANUAL"]).default("AUTO"),
   telegramToken: z.string().optional(),
   channelId: z.string().optional(),
@@ -19,6 +21,8 @@ const generateSignalSchema = z.object({
 
 const validateSSIDSchema = z.object({
   ssid: z.string().min(1),
+  email: z.string().optional(),
+  password: z.string().optional(),
 });
 
 export async function registerRoutes(
@@ -34,10 +38,10 @@ export async function registerRoutes(
   // Validate SSID and get current price
   app.post("/api/validate-ssid", async (req, res) => {
     try {
-      const { ssid } = validateSSIDSchema.parse(req.body);
+      const { ssid, email, password } = validateSSIDSchema.parse(req.body);
       console.log(`🔐 Validating SSID: ${ssid.substring(0, 3)}...${ssid.substring(ssid.length - 3)}`);
       
-      const client = createPocketOptionClient(ssid);
+      const client = createPocketOptionClient(ssid, email, password);
       const isValid = await client.validateSSID();
       
       if (isValid) {
@@ -72,7 +76,7 @@ export async function registerRoutes(
   // Generate trading signal
   app.post("/api/generate-signal", async (req, res) => {
     try {
-      const { symbol, ssid, source, telegramToken, channelId } = generateSignalSchema.parse(req.body);
+      const { symbol, ssid, email, password, source, telegramToken, channelId } = generateSignalSchema.parse(req.body);
       
       // PREVENT RECURSIVE LOOPS: If this is an AUTO request, ensure we don't trigger another one immediately
       console.log(`🔍 [SIGNAL] Starting scan for ${symbol} (Source: ${source})`);
@@ -97,7 +101,7 @@ export async function registerRoutes(
       }
 
       // Fetch REAL market data - 26+ candles required
-      const client = createPocketOptionClient(ssid);
+      const client = createPocketOptionClient(ssid, email, password);
       let candles;
       
       try {

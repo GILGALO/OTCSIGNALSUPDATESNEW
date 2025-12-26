@@ -21,6 +21,9 @@ export function SettingsPanel({ open, onOpenChange, onSaveSsid, currentSsid }: S
   const [expiration, setExpiration] = useState<Date | null>(null);
   const [mounted, setMounted] = useState(false);
 
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
   useEffect(() => {
     setMounted(true);
     if (currentSsid) {
@@ -28,19 +31,26 @@ export function SettingsPanel({ open, onOpenChange, onSaveSsid, currentSsid }: S
     }
     setSsid(currentSsid);
     
-    // Load saved telegram settings
+    // Load saved settings
     const savedToken = localStorage.getItem('telegram_bot_token');
     const savedChannel = localStorage.getItem('telegram_channel_id');
+    const savedEmail = localStorage.getItem('pocket_option_email');
+    const savedPassword = localStorage.getItem('pocket_option_password');
+    
     if (savedToken) setTelegramToken(savedToken);
     if (savedChannel) setChannelId(savedChannel);
+    if (savedEmail) setEmail(savedEmail);
+    if (savedPassword) setPassword(savedPassword);
   }, [currentSsid]);
 
   const handleSave = () => {
     onSaveSsid(ssid);
     
-    // Save telegram settings
+    // Save all settings
     if (telegramToken) localStorage.setItem('telegram_bot_token', telegramToken);
     if (channelId) localStorage.setItem('telegram_channel_id', channelId);
+    if (email) localStorage.setItem('pocket_option_email', email);
+    if (password) localStorage.setItem('pocket_option_password', password);
     
     setExpiration(addDays(new Date(), 30));
     onOpenChange(false);
@@ -70,22 +80,49 @@ export function SettingsPanel({ open, onOpenChange, onSaveSsid, currentSsid }: S
             </p>
           </div>
           
-          <div className="space-y-6">
+            <div className="space-y-6">
             {/* Pocket Option Settings */}
-            <div className="space-y-2">
-              <Label htmlFor="ssid" className="text-xs font-mono uppercase text-muted-foreground flex items-center gap-2">
-                <Key className="w-3 h-3" /> 
-                Pocket Option SSID
+            <div className="space-y-3">
+              <Label className="text-xs font-mono uppercase text-muted-foreground flex items-center gap-2">
+                <ShieldCheck className="w-3 h-3" /> 
+                Account Connectivity
               </Label>
-              <div className="relative">
-                <Input 
-                  id="ssid" 
-                  placeholder="Enter your SSID..." 
-                  className="font-mono text-xs bg-secondary/50 border-white/10 h-10 pr-10 text-accent text-foreground"
-                  value={ssid}
-                  onChange={(e) => setSsid(e.target.value)}
-                />
-                <ShieldCheck className="absolute right-3 top-3 w-4 h-4 text-green-500 opacity-50" />
+              
+              <div className="space-y-2">
+                <Label htmlFor="ssid" className="text-[10px] text-muted-foreground/60 font-mono">SSID (SESSION ID)</Label>
+                <div className="relative">
+                  <Input 
+                    id="ssid" 
+                    placeholder="Enter your SSID..." 
+                    className="font-mono text-xs bg-secondary/50 border-white/10 h-10 pr-10 text-foreground"
+                    value={ssid}
+                    onChange={(e) => setSsid(e.target.value)}
+                  />
+                  <Key className="absolute right-3 top-3 w-4 h-4 text-primary opacity-50" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] text-muted-foreground/60 font-mono">EMAIL (FALLBACK)</Label>
+                  <Input 
+                    type="email"
+                    placeholder="Email" 
+                    className="text-xs bg-secondary/30 border-white/10 h-9 text-foreground"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] text-muted-foreground/60 font-mono">PASSWORD</Label>
+                  <Input 
+                    type="password"
+                    placeholder="Password" 
+                    className="text-xs bg-secondary/30 border-white/10 h-9 text-foreground"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
 
