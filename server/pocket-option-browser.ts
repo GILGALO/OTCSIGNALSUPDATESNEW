@@ -178,13 +178,14 @@ export class PocketOptionBrowserClient {
         }
       }
 
-      // Try to authenticate with SSID if provided
-      if (this.ssid && this.ssid.length > 5) {
-        console.log('🔐 Attempting authentication with SSID...');
-        await this.authenticateWithSSID();
-      } else if (this.email && this.password) {
+      // Email and Password take precedence for user convenience.
+      // SSID remains as a fallback for users who prefer it or for session persistence.
+      if (this.email && this.password) {
         console.log(`🔐 Attempting authentication with Email: ${this.email}...`);
         await this.authenticateWithCredentials();
+      } else if (this.ssid && this.ssid.length > 5) {
+        console.log('🔐 Attempting authentication with SSID...');
+        await this.authenticateWithSSID();
       }
 
       // Extended wait after authentication and reload
