@@ -39,7 +39,8 @@ export async function registerRoutes(
   app.post("/api/validate-ssid", async (req, res) => {
     try {
       const { ssid, email, password } = validateSSIDSchema.parse(req.body);
-      console.log(`🔐 Validating SSID: ${ssid.substring(0, 3)}...${ssid.substring(ssid.length - 3)}`);
+      const displaySSID = ssid ? `${ssid.substring(0, 3)}...${ssid.substring(ssid.length - 3)}` : "None";
+      console.log(`🔐 Validating Access (SSID: ${displaySSID}, Email: ${email || "None"})`);
       
       const client = createPocketOptionClient(ssid, email, password);
       const isValid = await client.validateSSID();

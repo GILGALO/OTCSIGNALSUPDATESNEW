@@ -261,6 +261,10 @@ export class PocketOptionBrowserClient {
   }
 
   async validateSSID(): Promise<boolean> {
+    if ((!this.ssid || this.ssid.length < 5) && (!this.email || !this.password)) {
+      console.log('❌ No valid credentials (SSID or Email/Password) provided');
+      return false;
+    }
     return true;
   }
 
