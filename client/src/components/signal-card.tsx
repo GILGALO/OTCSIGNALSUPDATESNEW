@@ -24,9 +24,11 @@ interface GeneratedSignal {
   technicals: any;
 }
 
-// Top OTC liquid pairs - fastest scans, most signals (includes your winning signals)
+// Expanded OTC liquid pairs for maximum market coverage
 const ASSETS_FOR_AUTO_SCAN = [
   'EUR/USD', 'GBP/USD', 'USD/JPY', 'USD/CHF', 'EUR/JPY',
+  'AUD/USD', 'USD/CAD', 'NZD/USD', 'EUR/GBP', 'GBP/JPY',
+  'AUD/JPY', 'CHF/JPY', 'CAD/JPY', 'EUR/AUD', 'GBP/AUD'
 ];
 
 export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD' }: SignalCardProps) {
