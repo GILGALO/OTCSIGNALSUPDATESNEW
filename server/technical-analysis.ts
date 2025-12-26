@@ -212,6 +212,9 @@ export function analyzeCandles(candles: Candle[]): TechnicalMetrics {
       adx: 20,
       trend: 'NEUTRAL',
       momentum: 'WEAK',
+      volumeSignal: 'WEAK',
+      volatility: 0,
+      priceLevel: 'NEUTRAL',
     };
   }
 

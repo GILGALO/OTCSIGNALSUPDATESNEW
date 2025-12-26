@@ -72,17 +72,33 @@ export async function registerRoutes(
   });
 
   // Track last signal time per symbol for M5 cycle debouncing
+  // Also track pending signals to prevent race conditions
   const lastSignalTime = new Map<string, Date>();
+  const pendingSignals = new Map<string, Promise<void>>();
 
   // Generate trading signal
   app.post("/api/generate-signal", async (req, res) => {
+    let symbol: string;
+    let cleanupPending: (() => void) | null = null;
+
     try {
-      const { symbol, ssid, email, password, source, telegramToken, channelId } = generateSignalSchema.parse(req.body);
+      const parsed = generateSignalSchema.parse(req.body);
+      symbol = parsed.symbol;
+      const { ssid, email, password, source, telegramToken, channelId } = parsed;
       
       // PREVENT RECURSIVE LOOPS: If this is an AUTO request, ensure we don't trigger another one immediately
       console.log(`🔍 [SIGNAL] Starting scan for ${symbol} (Source: ${source})`);
 
       // M5 CYCLE DEBOUNCING: Only one signal per M5 candle cycle
+      // Check if there's a pending signal generation in progress
+      if (pendingSignals.has(symbol)) {
+        console.log(`[DEBOUNCE] Signal generation already in progress for ${symbol}`);
+        return res.json({ 
+          signal: null, 
+          message: `Signal generation already in progress for ${symbol}. Please wait.`
+        });
+      }
+
       const lastSignal = lastSignalTime.get(symbol);
       const nowMs = Date.now();
       
@@ -100,6 +116,19 @@ export async function registerRoutes(
           });
         }
       }
+      
+      // Mark signal generation as in progress (before we start processing)
+      let signalPromiseResolve: () => void;
+      const signalPromise = new Promise<void>(resolve => {
+        signalPromiseResolve = resolve;
+      });
+      pendingSignals.set(symbol, signalPromise);
+      
+      // Schedule cleanup when done
+      cleanupPending = () => {
+        pendingSignals.delete(symbol);
+        signalPromiseResolve!();
+      };
 
       // Fetch REAL market data - 26+ candles required
       const client = createPocketOptionClient(ssid, email, password);
@@ -110,6 +139,7 @@ export async function registerRoutes(
       } catch (dataError) {
         const errorMsg = dataError instanceof Error ? dataError.message : String(dataError);
         console.error(`🚨 REAL DATA FETCH FAILED: ${errorMsg}`);
+        cleanupPending();
         return res.status(400).json({ 
           error: "Real market data unavailable",
           details: errorMsg,
@@ -118,6 +148,7 @@ export async function registerRoutes(
       }
 
       if (candles.length < 26) {
+        cleanupPending();
         return res.status(400).json({ 
           error: "Insufficient real market data",
           details: `Only ${candles.length} candles available (need 26+)`,
@@ -165,6 +196,7 @@ export async function registerRoutes(
       const MINIMUM_CONFIDENCE_THRESHOLD = 70;
       
       if (type === "WAIT") {
+        cleanupPending();
         return res.json({ 
           signal: null, 
           message: "No clear directional signal detected. Market is neutral.",
@@ -174,6 +206,7 @@ export async function registerRoutes(
       }
       
       if (confidence < MINIMUM_CONFIDENCE_THRESHOLD) {
+        cleanupPending();
         return res.json({ 
           signal: null, 
           message: `Signal too weak (${confidence}% < ${MINIMUM_CONFIDENCE_THRESHOLD}% required) - waiting for stronger setup`,
@@ -181,6 +214,9 @@ export async function registerRoutes(
           minimumRequired: MINIMUM_CONFIDENCE_THRESHOLD
         });
       }
+      
+      // Record signal time EARLY to prevent race conditions
+      lastSignalTime.set(symbol, new Date());
 
       // Calculate entry, SL, TP
       const slippage = 0.15;
@@ -216,9 +252,6 @@ export async function registerRoutes(
         expiryTime,
         technicals: JSON.stringify(metrics),
       });
-
-      // RECORD THIS SIGNAL TIME FOR M5 CYCLE TRACKING (one signal per cycle)
-      lastSignalTime.set(symbol, new Date());
 
       // Schedule Telegram send: exactly 2 minutes before entry
       let telegramResult: { success: boolean; messageId?: string; error?: string; scheduled?: boolean; scheduledSendTime?: string } = { success: false };
@@ -306,6 +339,7 @@ export async function registerRoutes(
         scheduledSendTime = new Date();
       }
 
+      if (cleanupPending) cleanupPending();
       res.json({
         signal: {
           id: signal.id,
@@ -323,6 +357,7 @@ export async function registerRoutes(
         telegram: telegramResult,
       });
     } catch (error) {
+      if (cleanupPending) cleanupPending();
       const message = error instanceof Error ? error.message : "Unknown error";
       res.status(500).json({ error: message });
     }
