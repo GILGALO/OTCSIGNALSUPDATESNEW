@@ -78,6 +78,8 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
     setError(null);
     setLastSignalSent(null);
     setScannedAsset('');
+    setSignal('WAIT'); // Reset to WAIT state when starting a new scan
+    setSignalData(null);
 
     // In AUTO mode, scan ALL assets; in MANUAL mode, scan only selected asset
     const assetsToScan = mode === 'AUTO' ? ASSETS_FOR_AUTO_SCAN : [selectedAsset];
@@ -131,7 +133,13 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
             setConfidence(data.signal.confidence);
             setSignalData(data.signal);
             setScannedAsset(asset);
-            setExpiryTime(300);
+            
+            // Calculate remaining expiry time based on current time vs expiryTime from server
+            const now = new Date();
+            const expiry = new Date(data.signal.expiryTime);
+            const remainingSeconds = Math.max(0, Math.floor((expiry.getTime() - now.getTime()) / 1000));
+            
+            setExpiryTime(remainingSeconds > 0 ? remainingSeconds : 300);
             setScanProgress(100);
             if (data.telegram?.success) {
               setLastSignalSent(format(new Date(), 'HH:mm:ss'));
