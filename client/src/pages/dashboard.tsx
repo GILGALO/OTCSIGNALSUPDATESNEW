@@ -15,7 +15,7 @@ export default function Dashboard() {
   const [selectedAsset, setSelectedAsset] = useState('EUR/USD');
   const [ssid, setSsid] = useState('');
   const [mode, setMode] = useState<'AUTO' | 'MANUAL'>('AUTO');
-  const [isAutoActive, setIsAutoActive] = useState(true);
+  const [isAutoActive, setIsAutoActive] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [mobileTab, setMobileTab] = useState<'signal' | 'assets' | 'chart' | 'analysis'>('signal');
 
