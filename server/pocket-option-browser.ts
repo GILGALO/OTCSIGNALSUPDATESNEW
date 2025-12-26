@@ -140,6 +140,8 @@ export class PocketOptionBrowserClient {
           '--disable-gl-drawing-for-tests'
         ],
         protocolTimeout: 300000,
+        // Increase wait time for browser endpoint
+        timeout: 60000, 
       });
 
       this.page = await this.browser.newPage();
@@ -184,8 +186,14 @@ export class PocketOptionBrowserClient {
 
       // Check if we are logged in by looking for common protected elements
       const isLoggedIn = await this.page.evaluate(() => {
-        return !document.body.innerText.includes('Login') && 
-               !document.body.innerText.includes('Sign in') &&
+        const bodyText = document.body.innerText;
+        const has2FA = bodyText.includes('Two-factor') || bodyText.includes('2FA') || bodyText.includes('verification code');
+        if (has2FA) {
+          console.error('⚠️ [SECURITY] Two-Factor Authentication (2FA) detected! Headless login cannot proceed.');
+        }
+        return !bodyText.includes('Login') && 
+               !bodyText.includes('Sign in') &&
+               !has2FA &&
                (document.cookie.includes('session') || localStorage.getItem('sessionid') !== null);
       });
 
