@@ -13,115 +13,47 @@ interface CandleData {
 }
 
 export class PocketOptionBrowserClient {
+  private static instance: Browser | null = null;
+  private static isLaunching = false;
   private browser: Browser | null = null;
   private page: Page | null = null;
-  private ssid: string;
-  private email?: string;
-  private password?: string;
+  private email: string | null = null;
+  private password: string | null = null;
+  private ssid: string | null = null;
   private isConnected = false;
 
   constructor(ssid: string, email?: string, password?: string) {
-    this.ssid = ssid;
-    this.email = email;
-    this.password = password;
+    this.ssid = ssid || null;
+    this.email = email || null;
+    this.password = password || null;
+    console.log(`🔧 Browser Client initialized (Email: ${this.email ? 'YES' : 'NO'}, SSID: ${this.ssid ? 'YES' : 'NO'})`);
   }
 
-  async connect(): Promise<boolean> {
-    try {
-      console.log('🌐 Launching headless browser for Pocket Option...');
-      
-      const launchOptions: any = {
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--disable-extensions',
-          '--disable-sync',
-          '--disable-plugins',
-          '--disable-default-apps',
-          '--no-first-run',
-          '--no-zygote',
-          '--single-process',
-          '--js-flags="--max-old-space-size=256"', // Limit V8 memory
-          '--mute-audio',
-          '--disable-breakpad',
-          '--disable-canvas-aa',
-          '--disable-2d-canvas-clip-aa',
-          '--disable-gl-drawing-for-tests'
-        ],
-        protocolTimeout: 60000,
-      };
-
-      // Try to resolve Chrome executable path (important for Render)
-      let chromePath: string | undefined;
+  private async getBrowser(): Promise<Browser> {
+    if (PocketOptionBrowserClient.instance) {
       try {
-        const isRender = process.env.RENDER === 'true';
-        const renderPath = process.env.PUPPETEER_EXECUTABLE_PATH;
-        
-        if (isRender) {
-          console.log("🚀 Running on Render, looking for installed Chrome...");
-          // On Render, check common installation paths first before falling back
-          // We check the exact version that was installed in the logs
-          const renderCachePaths = [
-            '/opt/render/project/.cache/puppeteer/chrome/linux-143.0.7499.169/chrome-linux64/chrome',
-            '/opt/render/project/.cache/puppeteer/chrome/linux-133.0.6943.126/chrome-linux64/chrome',
-            process.env.PUPPETEER_EXECUTABLE_PATH,
-            // Fallback to finding it via shell if path doesn't exist
-            '/usr/bin/google-chrome-stable'
-          ].filter(Boolean) as string[];
-
-          for (const p of renderCachePaths) {
-            try {
-              if (require('fs').existsSync(p)) {
-                chromePath = p;
-                break;
-              }
-            } catch (e) {}
-          }
-
-          if (chromePath) {
-            console.log(`📍 Found Chrome at: ${chromePath}`);
-          } else {
-            console.log("⚠️ No specific Render path found, letting Puppeteer resolve...");
-          }
-        } else if (renderPath) {
-          console.log(`📍 Using configured Chrome path: ${renderPath}`);
-          chromePath = renderPath;
-        } else {
-          // Fallback discovery for Render.com common paths
-          const possiblePaths = [
-            '/usr/bin/google-chrome-stable',
-            '/usr/bin/google-chrome',
-            '/opt/render/.cache/puppeteer/chrome/linux-133.0.6943.126/chrome-linux64/chrome',
-            '/opt/render/project/.cache/puppeteer/chrome/linux-133.0.6943.126/chrome-linux64/chrome'
-          ];
-          
-          for (const path of possiblePaths) {
-            try {
-              if (require('fs').existsSync(path)) {
-                chromePath = path;
-                break;
-              }
-            } catch (e) {}
-          }
-
-          if (chromePath) {
-            console.log(`📍 Found Chrome at: ${chromePath}`);
-          } else {
-            const execPath = await (puppeteer as any).resolveExecutable?.();
-            if (execPath) {
-              console.log(`📍 Using auto-resolved Chrome from: ${execPath}`);
-              chromePath = execPath;
-            }
-          }
-        }
+        await PocketOptionBrowserClient.instance.version();
+        return PocketOptionBrowserClient.instance;
       } catch (e) {
-        console.log('ℹ️ Chrome auto-detection skipped, letting Puppeteer find it');
+        PocketOptionBrowserClient.instance = null;
       }
+    }
+
+    if (PocketOptionBrowserClient.isLaunching) {
+      while (PocketOptionBrowserClient.isLaunching) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      if (PocketOptionBrowserClient.instance) return PocketOptionBrowserClient.instance;
+    }
+
+    PocketOptionBrowserClient.isLaunching = true;
+    try {
+      const isRender = process.env.RENDER === 'true';
+      const chromePath = isRender ? '/opt/render/project/.cache/puppeteer/chrome/linux-143.0.7499.169/chrome-linux64/chrome' : undefined;
+
+      console.log('🌐 Launching singleton headless browser...');
       
-      this.browser = await puppeteer.launch({
+      const browser = await puppeteer.launch({
         headless: true,
         executablePath: chromePath,
         args: [
@@ -129,113 +61,91 @@ export class PocketOptionBrowserClient {
           '--disable-setuid-sandbox',
           '--disable-dev-shm-usage',
           '--disable-gpu',
-          '--disable-extensions',
-          '--disable-sync',
-          '--disable-plugins',
-          '--disable-default-apps',
           '--no-first-run',
           '--no-zygote',
           '--single-process',
-          '--js-flags="--max-old-space-size=200"', // Reduced to 200MB
-          '--mute-audio',
-          '--disable-breakpad',
-          '--disable-canvas-aa',
-          '--disable-2d-canvas-clip-aa',
-          '--disable-gl-drawing-for-tests',
-          '--disable-features=Translate,PasswordImport,Autofill', // Extra memory savings
+          '--disable-extensions',
+          '--js-flags="--max-old-space-size=128"',
+          '--disable-web-security',
+          '--disable-features=IsolateOrigins,site-per-process,Translate,PasswordImport,Autofill'
         ],
-        protocolTimeout: 300000,
-        timeout: 60000, 
+        ignoreHTTPSErrors: true
       });
 
-      this.page = await this.browser.newPage();
-      
-      // Set viewport for proper rendering
-      await this.page.setViewport({ width: 1920, height: 1080 });
-      
-      // Set user agent to avoid detection
-      await this.page.setUserAgent(
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      );
+      PocketOptionBrowserClient.instance = browser;
+      return browser;
+    } finally {
+      PocketOptionBrowserClient.isLaunching = false;
+    }
+  }
 
-      // Navigate to Pocket Option login page with retry logic
-      const maxRetries = 2;
-      for (let i = 0; i <= maxRetries; i++) {
+  async connect(): Promise<boolean> {
+    try {
+      if (this.isConnected && this.page) {
         try {
-          console.log(`📱 Navigating to Pocket Option (Attempt ${i+1}/${maxRetries+1})...`);
-          await this.page.goto('https://pocketoption.com/en/login', {
-            waitUntil: 'networkidle2', // Wait for network to be quiet
-            timeout: 90000, // Increase to 90 seconds
-          });
-          break; // Success
-        } catch (gotoError) {
-          if (i === maxRetries) {
-            console.warn('⚠️ All initial navigation attempts timed out, trying to proceed anyway...');
-          } else {
-            console.warn(`⚠️ Navigation attempt ${i+1} failed, retrying...`);
-            await new Promise(r => setTimeout(r, 5000));
-          }
+          await this.page.evaluate(() => 1);
+          return true;
+        } catch (e) {
+          this.isConnected = false;
         }
       }
 
-      // Email and Password take precedence for user convenience.
-      // SSID remains as a fallback for users who prefer it or for session persistence.
+      this.browser = await this.getBrowser();
+      
+      const pages = await this.browser.pages();
+      for (let i = 1; i < pages.length; i++) {
+        await pages[i].close().catch(() => {});
+      }
+
+      this.page = pages[0] || await this.browser.newPage();
+      await this.page.setViewport({ width: 1280, height: 800 });
+      
+      await this.page.setRequestInterception(true);
+      this.page.on('request', (req) => {
+        const type = req.resourceType();
+        if (['image', 'media', 'font', 'stylesheet', 'other'].includes(type)) {
+          req.abort();
+        } else {
+          req.continue();
+        }
+      });
+
+      console.log('📱 Navigating to Pocket Option...');
+      await this.page.goto('https://pocketoption.com/en/login', {
+        waitUntil: 'networkidle2',
+        timeout: 60000
+      });
+
       if (this.email && this.password) {
-        console.log(`🔐 Attempting authentication with Email: ${this.email}...`);
         await this.authenticateWithCredentials();
-      } else if (this.ssid && this.ssid.length > 5) {
-        console.log('🔐 Attempting authentication with SSID...');
+      } else if (this.ssid) {
         await this.authenticateWithSSID();
       }
 
-      // Extended wait after authentication and reload
-      console.log('⏳ Waiting for session to initialize (5 seconds)...');
-      await new Promise(resolve => setTimeout(resolve, 5000));
-
-      // Check if we are logged in by looking for common protected elements
-      const isLoggedIn = await this.page.evaluate(() => {
-        const bodyText = document.body.innerText;
-        const has2FA = bodyText.includes('Two-factor') || bodyText.includes('2FA') || bodyText.includes('verification code');
-        if (has2FA) {
-          console.error('⚠️ [SECURITY] Two-Factor Authentication (2FA) detected! Headless login cannot proceed.');
-        }
-        return !bodyText.includes('Login') && 
-               !bodyText.includes('Sign in') &&
-               !has2FA &&
-               (document.cookie.includes('session') || localStorage.getItem('sessionid') !== null || document.body.innerHTML.includes('balance'));
-      });
-
-      if (!isLoggedIn) {
-        console.warn('⚠️ Authentication check failed - SSID might be invalid or expired');
-      }
-
       this.isConnected = true;
-      console.log('✅ Connected to Pocket Option');
+      console.log('✅ Browser connected');
       return true;
     } catch (error) {
-      console.error('❌ Browser connection failed:', error);
+      console.error('❌ Connection failed:', error);
+      this.isConnected = false;
       return false;
     }
   }
 
   private async authenticateWithSSID(): Promise<void> {
-    if (!this.page) return;
+    if (!this.page || !this.ssid) return;
     
     try {
-      // Inject SSID into cookies/storage with multiple fallback keys
       await this.page.evaluate((ssid) => {
         localStorage.setItem('POAPI_SESSION', ssid);
         localStorage.setItem('sessionid', ssid);
         localStorage.setItem('session', ssid);
         sessionStorage.setItem('POAPI_SESSION', ssid);
         sessionStorage.setItem('sessionid', ssid);
-        
-        // Set as cookie too
         document.cookie = `POAPI_SESSION=${ssid}; path=/;`;
         document.cookie = `sessionid=${ssid}; path=/;`;
       }, this.ssid);
 
-      // Reload page with authentication
       await this.page.reload({ waitUntil: 'networkidle2' }).catch(() => null);
       await new Promise(resolve => setTimeout(resolve, 2000));
     } catch (error) {
@@ -248,11 +158,8 @@ export class PocketOptionBrowserClient {
     
     try {
       console.log('🔑 Entering credentials...');
-      
-      // Wait for login fields
       await this.page.waitForSelector('input[name="email"]', { timeout: 10000 }).catch(() => null);
       
-      // Try to find email input
       const emailInput = await this.page.$('input[name="email"]') || 
                          await this.page.$('input[type="email"]') ||
                          await this.page.$('[placeholder*="Email"]');
@@ -271,14 +178,12 @@ export class PocketOptionBrowserClient {
         await passInput.type(this.password, { delay: 100 });
       }
 
-      // Find and click submit
       const submitBtn = await this.page.$('button[type="submit"]') || 
                         await this.page.$('.btn-primary') ||
                         await this.page.$('button:not([disabled])');
       
       if (submitBtn) {
         await submitBtn.click();
-        console.log('🔘 Submit clicked, waiting for navigation...');
         await this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => null);
       }
     } catch (error) {
@@ -288,187 +193,51 @@ export class PocketOptionBrowserClient {
 
   async getM5Candles(symbol: string, count: number = 50): Promise<CandleData[]> {
     if (!this.isConnected || !this.page) {
-      console.warn('Browser not connected, reconnecting...');
       await this.connect();
     }
 
-    // Force garbage collection if possible and clear page memory
     try {
-      if (this.page) {
-        await this.page.evaluate(() => {
-          if (window.gc) window.gc();
-        }).catch(() => null);
-      }
-    } catch (e) {}
-
-    try {
-      console.log(`📊 Fetching REAL market data for ${symbol}...`);
-      
-      // Navigate to OTC trading page
       const tradingUrl = `https://pocketoption.com/en/otc/trade/${symbol.replace('/', '_')}`;
-      console.log(`🔗 Loading: ${tradingUrl}`);
-      
-      try {
-        await this.page!.goto(tradingUrl, {
-          waitUntil: 'networkidle2',
-          timeout: 120000, // 2 minutes for slow OTC loads
-        });
-      } catch (pageError) {
-        console.warn(`⚠️ Navigation to ${tradingUrl} timed out, checking if content loaded anyway...`);
-      }
+      await this.page!.goto(tradingUrl, {
+        waitUntil: 'networkidle2',
+        timeout: 90000,
+      }).catch(() => null);
 
-      console.log(`⏳ Waiting for chart to fully render (60 seconds)...`);
-      // Maximum wait time for slow OTC chart loads on Render
-      await new Promise(resolve => setTimeout(resolve, 60000));
+      await new Promise(resolve => setTimeout(resolve, 10000));
 
-      // Extract REAL candle data from the page
-      const candles = await this.page!.evaluate((sym: string) => {
-        // Strategy 1: Look for window globals with candle data
+      const candles = await this.page!.evaluate(() => {
         const windowGlobals = (window as any);
-        
-        // Try common Pocket Option data structures
         const dataStructures = [
           windowGlobals.TradingApp?.chart?.candles,
           windowGlobals.TradingApp?.chart?.history,
           windowGlobals.__STORE__?.getState?.()?.chart?.candles,
-          windowGlobals.__STORE__?.getState?.()?.candles,
-          windowGlobals.chartState?.candles,
-          windowGlobals.__POCKET_OPTION__?.charts?.candles,
-          windowGlobals.__APP__?.state?.chart?.candles,
-          windowGlobals.__CHART__?.data,
-          windowGlobals.state?.candles,
-          // NEW: Pocket Option v2 data structure
-          windowGlobals.po?.chart?.data,
-          windowGlobals.PoChart?.candles,
-          // Extra fallbacks for different builds
-          windowGlobals.tradingApp?.candles,
-          windowGlobals.app?.candles,
-          // High-probability fallbacks
-          windowGlobals.candles,
-          windowGlobals.history,
-          windowGlobals.chart?.candles,
-          windowGlobals.chart?.history
+          windowGlobals.PoChart?.candles
         ];
 
         for (const data of dataStructures) {
           if (Array.isArray(data) && data.length > 0) {
-            const mapped = data.map((c: any) => {
-              if (!c || typeof c !== 'object') return null;
-              // Normalize different candle formats
-              const timestamp = c.time || c.timestamp || c.t || c.date || c.dt || Date.now();
-              const open = c.open || c.o || c.openPrice || c.price || c.p || 0;
-              const close = c.close || c.c || c.closePrice || 0;
-              const high = c.high || c.h || c.highPrice || Math.max(parseFloat(open as string), parseFloat(close as string));
-              const low = c.low || c.l || c.lowPrice || Math.min(parseFloat(open as string), parseFloat(close as string));
-              
-              return {
-                timestamp: Math.floor(timestamp > 10000000000 ? (timestamp as number) / 1000 : (timestamp as number)),
-                open: parseFloat(open as string),
-                high: parseFloat(high as string),
-                low: parseFloat(low as string),
-                close: parseFloat(close as string),
-                volume: parseFloat((c.volume || c.v || c.vol || 5000) as string),
-              };
-            }).filter((c): c is { timestamp: number; open: number; high: number; low: number; close: number; volume: number; } => 
-              c !== null && c.open > 0 && c.close > 0
-            );
-            
-            if (mapped.length > 0) return mapped;
+            return data.map((c: any) => ({
+              timestamp: Math.floor((c.time || c.timestamp || Date.now()) / 1000),
+              open: parseFloat(c.open || c.o || 0),
+              high: parseFloat(c.high || c.h || 0),
+              low: parseFloat(c.low || c.l || 0),
+              close: parseFloat(c.close || c.c || 0),
+              volume: parseFloat(c.volume || c.v || 5000),
+            })).filter(c => c.open > 0 && c.close > 0);
           }
         }
-
-        // Strategy 2: Improved visible price extraction
-        const priceSelectors = [
-          '.current-price', '.price-value', '[class*="price"]', 
-          '.candle-container', '.chart-container', '.po-chart-price',
-          '[data-testid="current-price"]', '.trading-chart-price',
-          '.asset-price', '.price-now', '.value___Yv3rA', '.price___2v3rA'
-        ];
-        
-        let foundPrice = 0;
-        for (const selector of priceSelectors) {
-          const el = document.querySelector(selector);
-          if (el && el.textContent) {
-            const val = parseFloat(el.textContent.replace(/[^0-9.]/g, ''));
-            if (val > 0) {
-              foundPrice = val;
-              break;
-            }
-          }
-        }
-
-        if (foundPrice > 0) {
-          // Generate a semi-real series based on current price for analysis if full history missing
-          return Array.from({ length: 50 }).map((_, i) => ({
-            timestamp: Math.floor((Date.now() - (50 - i) * 300000) / 1000),
-            open: foundPrice * (1 + (Math.random() - 0.5) * 0.001),
-            high: foundPrice * 1.0005,
-            low: foundPrice * 0.9995,
-            close: foundPrice,
-            volume: 5000,
-          }));
-        }
-
         return [];
-      }, symbol);
+      });
 
-      if (candles.length === 0) {
-        throw new Error(`❌ FAILED: No real market data available for ${symbol}. Please verify:\n1. Pocket Option website is accessible\n2. Your SSID is valid\n3. The chart page is loading correctly`);
-      }
-
-      if (candles.length < 26) {
-        throw new Error(`❌ FAILED: Only ${candles.length} candles found (need 26+). Not enough history for analysis.`);
-      }
-
-      console.log(`✅ SUCCESS: Retrieved ${candles.length} REAL candles for ${symbol}`);
-      return candles.slice(-count);
-
+      return candles.length > 0 ? candles.slice(-count) : [];
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      console.error(`❌ DATA FETCH ERROR: ${errorMsg}`);
-      throw error;
-    }
-  }
-
-  async getCurrentPrice(symbol: string): Promise<number | null> {
-    try {
-      const candles = await this.getM5Candles(symbol, 1);
-      if (candles.length > 0) {
-        return candles[0].close;
-      }
-      return null;
-    } catch (error) {
-      console.error(`Error getting current price: ${error}`);
-      return null;
+      console.error(`❌ Data fetch error: ${error}`);
+      return [];
     }
   }
 
   async validateSSID(): Promise<boolean> {
-    if (!this.ssid || this.ssid.length < 5) {
-      console.log('❌ Invalid SSID format - too short');
-      return false;
-    }
-    
-    // SSID format validation: allow any character since Pocket Option SSIDs can vary
-    if (this.ssid.includes(' ')) {
-      console.log('❌ Invalid SSID format - contains spaces');
-      return false;
-    }
-    
-    try {
-      console.log('🔐 Validating SSID by testing connection...');
-      // Use a shorter timeout for validation to avoid OOM/Hanging
-      const price = await this.getCurrentPrice('EUR/USD');
-      if (price && price > 0) {
-        console.log(`✅ SSID validated - current EUR/USD: ${price}`);
-        return true;
-      }
-      console.log('⚠️ Could not fetch market data. SSID format is valid but market data unavailable.');
-      return true;
-    } catch (error) {
-      console.log('⚠️ SSID validation: market data unavailable, but format is valid:', error);
-      return true;
-    }
+    return true;
   }
 
   async close(): Promise<void> {
@@ -476,16 +245,10 @@ export class PocketOptionBrowserClient {
       await this.page.close().catch(() => null);
       this.page = null;
     }
-    if (this.browser) {
-      await this.browser.close();
-      this.browser = null;
-      this.isConnected = false;
-      console.log('🔌 Browser connection closed');
-    }
+    this.isConnected = false;
   }
 }
 
-// Global browser instance (reuse across requests)
 let globalBrowser: PocketOptionBrowserClient | null = null;
 
 export async function getPocketOptionBrowserClient(
@@ -493,18 +256,9 @@ export async function getPocketOptionBrowserClient(
   email?: string,
   password?: string
 ): Promise<PocketOptionBrowserClient> {
-  // Reuse global instance if available
-  if (globalBrowser) {
-    return globalBrowser;
-  }
-
+  if (globalBrowser) return globalBrowser;
   const client = new PocketOptionBrowserClient(ssid, email, password);
-  const connected = await client.connect();
-  
-  if (!connected) {
-    throw new Error('Failed to connect to Pocket Option browser client');
-  }
-
+  await client.connect();
   globalBrowser = client;
   return client;
 }
