@@ -112,7 +112,8 @@ export class PocketOptionBrowserClient {
         if (req.isInterceptResolutionHandled()) return;
         
         const type = req.resourceType();
-        if (['image', 'media', 'font', 'stylesheet', 'other'].includes(type)) {
+        // Only block images and media to speed up page load, but allow stylesheets and scripts
+        if (['image', 'media'].includes(type)) {
           req.abort().catch(() => {});
         } else {
           req.continue().catch(() => {});
@@ -201,8 +202,16 @@ export class PocketOptionBrowserClient {
         timeout: 90000,
       }).catch(() => null);
 
-      console.log('⏳ Waiting 20 seconds for chart to fully render...');
-      await new Promise(resolve => setTimeout(resolve, 20000));
+      console.log('⏳ Waiting for chart to fully render...');
+      
+      // Wait for the chart container to be visible
+      await this.page!.waitForFunction(() => {
+        const chart = document.querySelector('[data-chart], .chart-container, .trading-chart, canvas');
+        return chart !== null;
+      }, { timeout: 30000 }).catch(() => null);
+      
+      // Additional wait for data to load
+      await new Promise(resolve => setTimeout(resolve, 5000));
 
       // Take screenshot to see what's actually on the page
       const screenshotPath = '/tmp/pocket-option-screenshot.png';
@@ -218,17 +227,32 @@ export class PocketOptionBrowserClient {
           priceCount: 0,
           prices: [],
           candles: [],
+          pageTitle: document.title,
+          pageUrl: window.location.href,
         };
 
-        // Find ALL numeric prices in the page
-        const priceElements = Array.from(document.querySelectorAll('*'))
-          .map(el => ({
-            text: (el.textContent || '').trim(),
-            tag: el.tagName,
-            class: (el as HTMLElement).className,
-          }))
-          .filter(el => /^\d+\.\d{4,5}$/.test(el.text))
-          .map(el => parseFloat(el.text));
+        // Find ALL numeric prices in the page - expanded pattern
+        const pricePatterns = [
+          /^\d+\.\d{4,5}$/,  // 1.23456
+          /^\d+\.\d{1,6}$/,  // Any decimal price
+          /^\d{1,6}$/,        // Whole numbers
+        ];
+        
+        const allElements = Array.from(document.querySelectorAll('*'));
+        const priceElements = allElements
+          .filter(el => {
+            const text = (el.textContent || '').trim();
+            if (!text) return false;
+            // Must be short enough to be a price
+            if (text.length > 30) return false;
+            return pricePatterns.some(p => p.test(text));
+          })
+          .map(el => {
+            const text = (el.textContent || '').trim();
+            const num = parseFloat(text);
+            return !isNaN(num) && num > 0 && num < 10000 ? num : null;
+          })
+          .filter(p => p !== null) as number[];
 
         const uniquePrices = Array.from(new Set(priceElements)).sort((a, b) => a - b);
         result.priceCount = priceElements.length;
@@ -248,6 +272,10 @@ export class PocketOptionBrowserClient {
           { path: 'bars', label: 'bars' },
           { path: 'prices', label: 'prices' },
           { path: 'PoChart.candles', label: 'PoChart' },
+          { path: '__APP_DATA__', label: '__APP_DATA__' },
+          { path: '__INITIAL_STATE__', label: '__INITIAL_STATE__' },
+          { path: 'app.store', label: 'app.store' },
+          { path: 'state.chart.candles', label: 'state.chart.candles' },
         ];
 
         for (const loc of directLocations) {
