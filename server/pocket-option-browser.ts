@@ -126,10 +126,24 @@ export class PocketOptionBrowserClient {
         timeout: 90000
       });
 
+      // Check if already logged in
+      const initialUrl = this.page.url();
+      const initialTitle = await this.page.title();
+      if (!initialUrl.includes('login')) {
+        console.log('✅ Already logged in - skipping authentication');
+        this.isConnected = true;
+        return true;
+      }
+
+      // Proceed with authentication
       if (this.email && this.password) {
+        console.log('🔄 Authenticating with email/password...');
         await this.authenticateWithCredentials();
       } else if (this.ssid) {
+        console.log('🔄 Authenticating with SSID token...');
         await this.authenticateWithSSID();
+      } else {
+        console.warn('⚠️ No credentials provided (email/password or SSID)');
       }
 
       this.isConnected = true;
@@ -187,41 +201,57 @@ export class PocketOptionBrowserClient {
     try {
       console.log('🔑 Entering credentials...');
       
-      // Wait for email input field
-      await this.page.waitForSelector('input[type="email"], input[placeholder*="email"], input[name*="email"]', { timeout: 15000 }).catch(() => null);
+      // Wait for email input field - be patient
+      try {
+        await this.page.waitForSelector('input[type="email"], input[placeholder*="email"], input[name*="email"]', { timeout: 20000 });
+      } catch {
+        console.warn('⚠️ Timeout waiting for email input - form may not be loaded');
+      }
       
       // Find and fill email field
-      const emailInput = await this.page.$('input[type="email"], input[placeholder*="email"], input[name*="email"]');
+      const emailInput = await this.page.$('input[type="email"], input[placeholder*="email"], input[name*="email"]') as any;
       if (emailInput) {
-        await emailInput.click();
+        await emailInput.click({ delay: 100 });
         await emailInput.evaluate((el: HTMLInputElement) => el.value = '');
-        await emailInput.type(this.email, { delay: 30 });
+        await emailInput.type(this.email, { delay: 50 });
         console.log('✓ Email entered');
       } else {
-        console.warn('⚠️ Email input not found');
+        console.warn('⚠️ Email input not found - form may still be loading');
+        return;
       }
 
+      // Small delay between fields
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // Find and fill password field
-      const passInput = await this.page.$('input[type="password"], input[placeholder*="password"], input[name*="password"]');
+      const passInput = await this.page.$('input[type="password"], input[placeholder*="password"], input[name*="password"]') as any;
       if (passInput) {
-        await passInput.click();
+        await passInput.click({ delay: 100 });
         await passInput.evaluate((el: HTMLInputElement) => el.value = '');
-        await passInput.type(this.password, { delay: 30 });
+        await passInput.type(this.password, { delay: 50 });
         console.log('✓ Password entered');
       } else {
         console.warn('⚠️ Password input not found');
+        return;
       }
 
+      // Delay before submission
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // Find and click submit button - try multiple selectors
-      let submitBtn = await this.page.$('button[type="submit"]');
+      let submitBtn: any = await this.page.$('button[type="submit"]');
       if (!submitBtn) {
-        submitBtn = await this.page.$('button');
+        submitBtn = await this.page.$('[class*="submit"], [class*="login"], button:not([class*="close"])');
       }
       if (!submitBtn) {
         const allButtons = await this.page.$$('button');
         for (const btn of allButtons) {
           const text = await btn.evaluate(el => el.textContent?.toLowerCase());
-          if (text && (text.includes('login') || text.includes('sign in') || text.includes('enter'))) {
+          const isVisible = await btn.evaluate(el => {
+            const style = window.getComputedStyle(el);
+            return style.display !== 'none' && style.visibility !== 'hidden';
+          });
+          if (isVisible && text && (text.includes('login') || text.includes('sign in') || text.includes('enter') || text.includes('submit'))) {
             submitBtn = btn;
             break;
           }
@@ -229,30 +259,56 @@ export class PocketOptionBrowserClient {
       }
 
       if (submitBtn) {
-        console.log('🔐 Clicking login button...');
-        await submitBtn.click();
+        console.log('🔐 Submitting login form...');
         
-        // Wait for navigation or page change
+        // Try clicking the button
         try {
-          await this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 45000 });
-          console.log('✓ Login navigation complete');
-        } catch (navErr) {
-          console.log('⚠️ Navigation timeout (page may have loaded without redirect)');
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          await submitBtn.click();
+        } catch (e) {
+          // If click fails, try pressing Enter in password field
+          console.log('⚠️ Button click failed, trying Enter key');
+          await passInput?.press('Enter').catch(() => {});
         }
         
-        // Verify login succeeded by checking page title or URL
+        // Wait for navigation or content change with longer timeout
+        let loginSuccess = false;
+        try {
+          await this.page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 60000 });
+          loginSuccess = true;
+          console.log('✓ Login navigation complete');
+        } catch (navErr) {
+          console.log('⚠️ Navigation timeout - checking if content changed...');
+          
+          // Check if page content changed (even without explicit navigation)
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          
+          const currentUrl = this.page.url();
+          const pageChanged = !currentUrl.includes('/en/login') || !currentUrl.includes('login');
+          if (pageChanged) {
+            console.log('✓ Page content appears to have changed');
+            loginSuccess = true;
+          }
+        }
+        
+        // Verify login succeeded by checking page state
         const pageTitle = await this.page.title();
         const pageUrl = this.page.url();
         console.log(`📄 Post-login: Title="${pageTitle}", URL="${pageUrl}"`);
         
-        if (pageUrl.includes('dashboard') || pageUrl.includes('trading') || !pageUrl.includes('login')) {
-          console.log('✅ Login appears successful');
+        if (!pageUrl.includes('login') || loginSuccess) {
+          console.log('✅ Login appears successful - redirected away from login page');
         } else {
-          console.warn('⚠️ May still be on login page - check credentials');
+          console.error('❌ Login FAILED - still on login page. Check credentials (email/password may be invalid)');
+          // Try to capture any error messages on the page
+          const errorMsgs = await this.page.$$eval('[class*="error"], [class*="alert"], .message', els => 
+            els.map(el => el.textContent).filter(t => t && t.trim())
+          ).catch(() => []);
+          if (errorMsgs.length > 0) {
+            console.error('📌 Error messages on page:', errorMsgs.join(' | '));
+          }
         }
       } else {
-        console.warn('⚠️ Login button not found');
+        console.error('❌ Login button not found - form may not be present');
       }
     } catch (error) {
       console.error('❌ Credential auth error:', error);
