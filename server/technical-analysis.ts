@@ -205,61 +205,75 @@ export function analyzeCandles(candles: Candle[]): TechnicalMetrics {
   };
 }
 
-// Generate signal based on technicals - REFINED CONSENSUS APPROACH
+// Generate signal based on technicals - HIGH PROBABILITY SETUP APPROACH
 export function generateSignalFromTechnicals(metrics: TechnicalMetrics, currentPrice: number): { type: 'CALL' | 'PUT' | 'WAIT'; confidence: number } {
   let bullishScore = 0;
   let bearishScore = 0;
 
-  // 1. MACD - Trend direction (Weighted 3)
-  if (metrics.macdHistogram > 0 && metrics.macdLine > metrics.macdSignal) {
+  // MANDATORY ADX CHECK: Trend must be strong enough
+  // Without strong trend, the market is too choppy for reliable signals
+  if (metrics.adx < 25) {
+    return { type: 'WAIT', confidence: 0 };
+  }
+
+  // 1. MACD - Trend direction with strength check (Weighted 3)
+  // Only count if histogram shows clear momentum
+  if (metrics.macdHistogram > 0.001 && metrics.macdLine > metrics.macdSignal) {
     bullishScore += 3;
-  } else if (metrics.macdHistogram < 0 && metrics.macdLine < metrics.macdSignal) {
+  } else if (metrics.macdHistogram < -0.001 && metrics.macdLine < metrics.macdSignal) {
     bearishScore += 3;
   }
 
   // 2. Trend Alignment - SMA & EMA (Weighted 4)
+  // Strong alignment = higher probability
   if (metrics.trend === 'BULLISH') {
     bullishScore += 4;
   } else if (metrics.trend === 'BEARISH') {
     bearishScore += 4;
   }
 
-  // 3. RSI - Momentum Validation (Weighted 2)
-  // Optimal OTC "sweet spot" is 40-60
-  if (metrics.rsi > 52 && metrics.rsi < 70) {
+  // 3. RSI - Strict momentum validation (Weighted 3, increased weight)
+  // Avoid oversold/overbought extremes, prefer active momentum zones
+  if (metrics.rsi > 55 && metrics.rsi < 75) {
+    bullishScore += 3;
+  } else if (metrics.rsi < 45 && metrics.rsi > 25) {
+    bearishScore += 3;
+  }
+
+  // 4. ADX - Strong Trend Strength (Weighted 3, increased weight)
+  // Only when trend is very strong do we get the best wins
+  if (metrics.adx > 35) {
+    if (metrics.trend === 'BULLISH') bullishScore += 3;
+    if (metrics.trend === 'BEARISH') bearishScore += 3;
+  } else if (metrics.adx > 25) {
+    if (metrics.trend === 'BULLISH') bullishScore += 1;
+    if (metrics.trend === 'BEARISH') bearishScore += 1;
+  }
+
+  // 5. Stochastic - Confirmation in right direction (Weighted 2, increased weight)
+  // Must align with trend direction to confirm
+  if (metrics.trend === 'BULLISH' && metrics.stochasticK > 55) {
     bullishScore += 2;
-  } else if (metrics.rsi < 48 && metrics.rsi > 30) {
+  } else if (metrics.trend === 'BEARISH' && metrics.stochasticK < 45) {
     bearishScore += 2;
-  }
-
-  // 4. ADX - Trend Strength (Weighted 2)
-  if (metrics.adx > 22) {
-    if (metrics.trend === 'BULLISH') bullishScore += 2;
-    if (metrics.trend === 'BEARISH') bearishScore += 2;
-  }
-
-  // 5. Stochastic - Micro-momentum (Weighted 1)
-  if (metrics.stochasticK > 50) {
-    bullishScore += 1;
-  } else if (metrics.stochasticK < 50) {
-    bearishScore += 1;
   }
 
   let type: 'CALL' | 'PUT' | 'WAIT' = 'WAIT';
   let confidence = 0;
 
-  // CONSENSUS CALCULATION
-  // Max possible score is 12. 
-  // We require a minimum of 5 for a signal (Moderate consensus = ~75% confidence)
-  const MIN_SCORE = 5;
+  // STRICT CONSENSUS CALCULATION
+  // Max possible score is 15 (3+4+3+3+2)
+  // Require score of 9+ for HIGH PROBABILITY signals only
+  // This means: strong trend + momentum confirmation + directional alignment
+  const MIN_SCORE = 9;
 
   if (bullishScore >= MIN_SCORE && bullishScore > bearishScore) {
     type = 'CALL';
-    // Map score 5-12 to confidence 75-99
-    confidence = 75 + Math.round(((bullishScore - MIN_SCORE) / (12 - MIN_SCORE)) * 24);
+    // Map score 9-15 to confidence 82-99 (higher base for better setups)
+    confidence = 82 + Math.round(((bullishScore - MIN_SCORE) / (15 - MIN_SCORE)) * 17);
   } else if (bearishScore >= MIN_SCORE && bearishScore > bullishScore) {
     type = 'PUT';
-    confidence = 75 + Math.round(((bearishScore - MIN_SCORE) / (12 - MIN_SCORE)) * 24);
+    confidence = 82 + Math.round(((bearishScore - MIN_SCORE) / (15 - MIN_SCORE)) * 17);
   }
 
   return { type, confidence };
