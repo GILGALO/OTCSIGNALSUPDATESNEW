@@ -250,12 +250,12 @@ export function generateSignalFromTechnicals(metrics: TechnicalMetrics, currentP
 
   // CONSENSUS CALCULATION
   // Max possible score is 12. 
-  // We require a minimum of 7 for a signal (Strong consensus)
-  const MIN_SCORE = 7;
+  // We require a minimum of 5 for a signal (Moderate consensus = ~75% confidence)
+  const MIN_SCORE = 5;
 
   if (bullishScore >= MIN_SCORE && bullishScore > bearishScore) {
     type = 'CALL';
-    // Map score 7-12 to confidence 75-99
+    // Map score 5-12 to confidence 75-99
     confidence = 75 + Math.round(((bullishScore - MIN_SCORE) / (12 - MIN_SCORE)) * 24);
   } else if (bearishScore >= MIN_SCORE && bearishScore > bullishScore) {
     type = 'PUT';
