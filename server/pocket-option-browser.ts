@@ -291,7 +291,7 @@ export class PocketOptionBrowserClient {
       console.log(`📸 Screenshot saved: ${screenshotPath}`);
 
       // Extract data with VERBOSE debugging
-      const extractionResult = await this.page!.evaluate(() => {
+      const extractionResult: any = await this.page!.evaluate(() => {
         const result: any = {
           foundData: false,
           sources: [],
@@ -301,6 +301,7 @@ export class PocketOptionBrowserClient {
           candles: [],
           pageTitle: document.title,
           pageUrl: window.location.href,
+          pairFormatsFound: [],
         };
 
         // Find ALL numeric prices in the page - expanded pattern
@@ -333,8 +334,18 @@ export class PocketOptionBrowserClient {
         // Search window globals more thoroughly
         const windowObj = window as any;
         
-        // Strategy 1: Direct common locations
+        // Strategy 1: Direct common locations - Including Pocket Option specific paths
         const directLocations = [
+          // Pocket Option specific locations
+          { path: 'PocketOption.chart.candles', label: 'PocketOption chart' },
+          { path: 'PocketOption.chartData', label: 'PocketOption chartData' },
+          { path: 'pocketOption.candles', label: 'pocketOption candles' },
+          { path: 'po.chart.candles', label: 'po.chart.candles' },
+          { path: 'chart.candles', label: 'chart.candles' },
+          { path: 'chartCandles', label: 'chartCandles' },
+          { path: 'allCandles', label: 'allCandles' },
+          { path: 'tradingData.candles', label: 'tradingData' },
+          // Standard locations
           { path: 'TradingView.chart.getVisibleRange', label: 'TradingView (direct)' },
           { path: '__STORE__.getState().chart.candles', label: 'Redux Store' },
           { path: 'chartData.candles', label: 'chartData' },
@@ -394,7 +405,7 @@ export class PocketOptionBrowserClient {
           }
         }
 
-        // Strategy 3: Canvas inspection (if chart is rendered to canvas)
+        // Strategy 4: Canvas inspection (if chart is rendered to canvas)
         const canvases = document.querySelectorAll('canvas');
         result.sources.push(`📊 Found ${canvases.length} canvas elements`);
 
@@ -402,6 +413,7 @@ export class PocketOptionBrowserClient {
       });
 
       console.log('📋 EXTRACTION DEBUG:');
+      console.log(`   - Pair formats tried: ${extractionResult.pairFormatsFound.join(', ') || 'None found'}`);
       console.log(`   - Price elements found: ${extractionResult.priceCount}`);
       console.log(`   - Unique prices: ${extractionResult.prices.slice(0, 10).join(', ')}`);
       console.log(`   - Data sources found: ${extractionResult.sources.join(' | ')}`);
