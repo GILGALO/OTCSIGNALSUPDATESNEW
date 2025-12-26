@@ -230,15 +230,29 @@ export function analyzeCandles(candles: Candle[]): TechnicalMetrics {
   const currentClose = closes[closes.length - 1];
   const priceLevel = detectPriceLevel(candles, currentClose);
   
-  // Determine trend - Refined for OTC
+  // Determine trend - Use weighted scoring for more reliable detection
   let trend: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = 'NEUTRAL';
   
-  const isSmaBullish = currentClose > sma20 && sma20 > sma50;
-  const isEmaBullish = ema12 > ema26 && currentClose > ema12;
+  // Weighted scoring system for trend
+  let bullishScore = 0;
+  let bearishScore = 0;
   
-  if (isSmaBullish && isEmaBullish) {
+  // SMA signals (weight 2)
+  if (currentClose > sma20 && sma20 > sma50) bullishScore += 2;
+  if (currentClose < sma20 && sma20 < sma50) bearishScore += 2;
+  
+  // EMA signals (weight 2)
+  if (ema12 > ema26 && currentClose > ema12) bullishScore += 2;
+  if (ema12 < ema26 && currentClose < ema12) bearishScore += 2;
+  
+  // Price position (weight 1)
+  if (currentClose > (sma20 + sma50) / 2) bullishScore += 1;
+  if (currentClose < (sma20 + sma50) / 2) bearishScore += 1;
+  
+  // Determine trend: need at least 2 points to declare a trend
+  if (bullishScore >= 2 && bullishScore > bearishScore) {
     trend = 'BULLISH';
-  } else if (currentClose < sma20 && sma20 < sma50 && ema12 < ema26 && currentClose < ema12) {
+  } else if (bearishScore >= 2 && bearishScore > bullishScore) {
     trend = 'BEARISH';
   }
   

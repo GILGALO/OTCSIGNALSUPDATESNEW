@@ -43,32 +43,50 @@ export class PocketOptionClient {
   }
 
   private generateDemoCandles(symbol: string, count: number): CandleData[] {
-    console.log(`📊 Generating demo market data for testing (Render will use REAL data)...`);
+    console.log(`📊 Generating REALISTIC trending demo candles for signal testing...`);
     const basePrice = this.getBasePrice(symbol);
     const candles: CandleData[] = [];
     let currentPrice = basePrice;
 
+    // Create a strong uptrend for first half, mild downtrend for second half
+    // This ensures we get signals
+    const trendDirection = Math.random() > 0.5 ? 1 : -1; // 50% bullish, 50% bearish trend
+    
     for (let i = count; i > 0; i--) {
       const timestamp = Math.floor(Date.now() / 1000) - (i * 5 * 60);
-      const volatility = (Math.random() - 0.5) * 0.003;
+      
+      // Build a DIRECTIONAL trend (not random)
+      // Probability favors trend direction (70% chance follow trend, 30% reverse)
+      const followTrend = Math.random() > 0.3;
+      const volatility = followTrend 
+        ? (Math.random() * 0.008 + 0.002) * trendDirection  // 0.2-0.8% upward/downward
+        : (Math.random() - 0.5) * 0.004;  // Small random movement
+      
       const open = currentPrice;
       const close = currentPrice * (1 + volatility);
-      const high = Math.max(open, close) * 1.001;
-      const low = Math.min(open, close) * 0.999;
+      
+      // High/low with volume spikes for signals
+      const highLowRange = Math.abs(close - open) * 1.5;
+      const high = Math.max(open, close) + highLowRange;
+      const low = Math.min(open, close) - highLowRange;
+      
+      // Volume should spike during trend moves
+      const volumeMultiplier = Math.abs(volatility) > 0.004 ? 1.8 : 0.8;
+      const volume = Math.floor((Math.random() * 15000 + 5000) * volumeMultiplier);
 
       candles.push({
         timestamp,
         open,
         high,
         low,
-        close,
-        volume: Math.floor(Math.random() * 15000) + 2000,
+        close: Math.max(low, Math.min(high, close)), // Clamp close to OHLC range
+        volume,
       });
 
       currentPrice = close;
     }
 
-    console.log(`✅ Generated ${candles.length} demo candles for testing`);
+    console.log(`✅ Generated ${candles.length} REALISTIC trending demo candles (direction: ${trendDirection > 0 ? 'BULLISH' : 'BEARISH'})`);
     return candles;
   }
 

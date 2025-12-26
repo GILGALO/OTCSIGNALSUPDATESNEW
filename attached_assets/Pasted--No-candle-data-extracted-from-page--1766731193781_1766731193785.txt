@@ -1,0 +1,190 @@
+ ///////////////////////////////////////////////////////////
+⚠️ No candle data extracted from page globals
+⚠️ [POCKET OPTION] No candles returned for GBP/USD, trying demo fallback...
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] GBP/USD: type=WAIT, confidence=0%, trend=NEUTRAL, adx=17.8
+⚠️ [POCKET OPTION] No candles returned for GBP/USD, trying demo fallback...
+⚠️ No candle data extracted from page globals
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] GBP/USD: type=WAIT, confidence=0%, trend=NEUTRAL, adx=47.6
+🔍 [SIGNAL] Starting scan for GBP/USD (Source: AUTO)
+🔄 [POCKET OPTION] Requesting REAL data for GBP/USD...
+🔧 Browser Client initialized (Email: NO, SSID: YES)
+🌐 Launching singleton headless browser...
+🔍 [SIGNAL] Starting scan for GBP/USD (Source: AUTO)
+🔄 [POCKET OPTION] Requesting REAL data for GBP/USD...
+🔧 Browser Client initialized (Email: NO, SSID: YES)
+📱 Navigating to Pocket Option...
+📱 Navigating to Pocket Option...
+❌ Connection failed: Error: net::ERR_ABORTED at https://pocketoption.com/en/login
+    at navigate (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/cdp/Frame.js:184:27)
+    at async Deferred.race (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/util/Deferred.js:36:20)
+    at async CdpFrame.goto (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/cdp/Frame.js:150:25)
+    at async CdpPage.goto (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/api/Page.js:572:20)
+    at async t.connect (/opt/render/project/src/dist/index.cjs:70:105135)
+    at async $w (/opt/render/project/src/dist/index.cjs:70:108420)
+    at async Xd.getM5Candles (/opt/render/project/src/dist/index.cjs:70:108661)
+    at async /opt/render/project/src/dist/index.cjs:91:7128
+📱 Navigating to Pocket Option...
+🔍 [SIGNAL] Starting scan for EUR/USD (Source: AUTO)
+🔄 [POCKET OPTION] Requesting REAL data for EUR/USD...
+🔍 [SIGNAL] Starting scan for EUR/USD (Source: AUTO)
+🔄 [POCKET OPTION] Requesting REAL data for EUR/USD...
+📱 Navigating to Pocket Option...
+📱 Navigating to Pocket Option...
+🔗 Loading Chart: https://pocketoption.com/en/otc/trade/EUR_USD
+❌ Connection failed: Error: net::ERR_ABORTED at https://pocketoption.com/en/login
+🔗 Loading Chart: https://pocketoption.com/en/otc/trade/EUR_USD
+    at navigate (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/cdp/Frame.js:184:27)
+    at async Deferred.race (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/util/Deferred.js:36:20)
+    at async CdpFrame.goto (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/cdp/Frame.js:150:25)
+    at async CdpPage.goto (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/api/Page.js:572:20)
+    at async t.connect (/opt/render/project/src/dist/index.cjs:70:105135)
+    at async t.getM5Candles (/opt/render/project/src/dist/index.cjs:70:107051)
+    at async Xd.getM5Candles (/opt/render/project/src/dist/index.cjs:70:108655)
+    at async /opt/render/project/src/dist/index.cjs:91:7128
+❌ Connection failed: Error: net::ERR_ABORTED at https://pocketoption.com/en/login
+    at navigate (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/cdp/Frame.js:184:27)
+    at async Deferred.race (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/util/Deferred.js:36:20)
+    at async CdpFrame.goto (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/cdp/Frame.js:150:25)
+    at async CdpPage.goto (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/api/Page.js:572:20)
+    at async t.connect (/opt/render/project/src/dist/index.cjs:70:105135)
+    at async t.getM5Candles (/opt/render/project/src/dist/index.cjs:70:107051)
+    at async Xd.getM5Candles (/opt/render/project/src/dist/index.cjs:70:108655)
+    at async /opt/render/project/src/dist/index.cjs:91:7128
+⚠️ No candle data extracted from page globals
+⚠️ [POCKET OPTION] No candles returned for EUR/USD, trying demo fallback...
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] EUR/USD: type=WAIT, confidence=0%, trend=NEUTRAL, adx=53.4
+6:34:59 AM [express] POST /api/generate-signal 200 in 20004ms :: {"signal":null,"message":"No clear directional signal detected. Market is neutral.","confidence":0,"minimumRequired":70}
+🔍 [SIGNAL] Starting scan for GBP/USD (Source: AUTO)
+🔄 [POCKET OPTION] Requesting REAL data for GBP/USD...
+📱 Navigating to Pocket Option...
+✅ Browser connected
+🔗 Loading Chart: https://pocketoption.com/en/otc/trade/GBP_USD
+✅ Browser connected
+🔗 Loading Chart: https://pocketoption.com/en/otc/trade/GBP_USD
+❌ Connection failed: Error: net::ERR_ABORTED at https://pocketoption.com/en/login
+    at navigate (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/cdp/Frame.js:184:27)
+    at async Deferred.race (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/util/Deferred.js:36:20)
+    at async CdpFrame.goto (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/cdp/Frame.js:150:25)
+    at async CdpPage.goto (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/api/Page.js:572:20)
+    at async t.connect (/opt/render/project/src/dist/index.cjs:70:105135)
+    at async t.getM5Candles (/opt/render/project/src/dist/index.cjs:70:107051)
+    at async Xd.getM5Candles (/opt/render/project/src/dist/index.cjs:70:108655)
+    at async /opt/render/project/src/dist/index.cjs:91:7128
+🔗 Loading Chart: https://pocketoption.com/en/otc/trade/GBP_USD
+⚠️ No candle data extracted from page globals
+⚠️ [POCKET OPTION] No candles returned for GBP/USD, trying demo fallback...
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] GBP/USD: type=WAIT, confidence=0%, trend=NEUTRAL, adx=68.3
+6:35:18 AM [express] POST /api/generate-signal 200 in 59528ms :: {"signal":null,"message":"No clear directional signal detected. Market is neutral.","confidence":0,"minimumRequired":70}
+⚠️ No candle data extracted from page globals
+⚠️ [POCKET OPTION] No candles returned for GBP/USD, trying demo fallback...
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] GBP/USD: type=WAIT, confidence=0%, trend=NEUTRAL, adx=1.7
+6:35:19 AM [express] POST /api/generate-signal 200 in 60240ms :: {"signal":null,"message":"No clear directional signal detected. Market is neutral.","confidence":0,"minimumRequired":70}
+⚠️ No candle data extracted from page globals
+⚠️ [POCKET OPTION] No candles returned for EUR/USD, trying demo fallback...
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] EUR/USD: type=WAIT, confidence=0%, trend=NEUTRAL, adx=3.1
+6:35:23 AM [express] POST /api/generate-signal 200 in 44004ms :: {"signal":null,"message":"No clear directional signal detected. Market is neutral.","confidence":0,"minimumRequired":70}
+⚠️ No candle data extracted from page globals
+⚠️ [POCKET OPTION] No candles returned for GBP/USD, trying demo fallback...
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] GBP/USD: type=WAIT, confidence=0%, trend=NEUTRAL, adx=64.5
+6:35:23 AM [express] POST /api/generate-signal 200 in 24402ms :: {"signal":null,"message":"No clear directional signal detected. Market is neutral.","confidence":0,"minimumRequired":70}
+🔍 [SIGNAL] Starting scan for GBP/USD (Source: AUTO)
+🔄 [POCKET OPTION] Requesting REAL data for GBP/USD...
+🔗 Loading Chart: https://pocketoption.com/en/otc/trade/GBP_USD
+🔍 [SIGNAL] Starting scan for USD/JPY (Source: AUTO)
+🔄 [POCKET OPTION] Requesting REAL data for USD/JPY...
+🔗 Loading Chart: https://pocketoption.com/en/otc/trade/USD_JPY
+⚠️ No candle data extracted from page globals
+⚠️ [POCKET OPTION] No candles returned for GBP/USD, trying demo fallback...
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] GBP/USD: type=WAIT, confidence=0%, trend=NEUTRAL, adx=13.2
+6:35:41 AM [express] POST /api/generate-signal 200 in 17301ms :: {"signal":null,"message":"No clear directional signal detected. Market is neutral.","confidence":0,"minimumRequired":70}
+🔍 [SIGNAL] Starting scan for USD/JPY (Source: AUTO)
+🔄 [POCKET OPTION] Requesting REAL data for USD/JPY...
+🔗 Loading Chart: https://pocketoption.com/en/otc/trade/USD_JPY
+⚠️ No candle data extracted from page globals
+⚠️ [POCKET OPTION] No candles returned for USD/JPY, trying demo fallback...
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] USD/JPY: type=WAIT, confidence=0%, trend=NEUTRAL, adx=24.5
+6:35:49 AM [express] POST /api/generate-signal 200 in 25205ms :: {"signal":null,"message":"No clear directional signal detected. Market is neutral.","confidence":0,"minimumRequired":70}
+🔍 [SIGNAL] Starting scan for USD/CHF (Source: AUTO)
+🔄 [POCKET OPTION] Requesting REAL data for USD/CHF...
+🔗 Loading Chart: https://pocketoption.com/en/otc/trade/USD_CHF
+⚠️ No candle data extracted from page globals
+⚠️ [POCKET OPTION] No candles returned for USD/JPY, trying demo fallback...
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] USD/JPY: type=WAIT, confidence=0%, trend=NEUTRAL, adx=6.8
+6:36:04 AM [express] POST /api/generate-signal 200 in 22001ms :: {"signal":null,"message":"No clear directional signal detected. Market is neutral.","confidence":0,"minimumRequired":70}
+🔍 [SIGNAL] Starting scan for USD/CHF (Source: AUTO)
+🔄 [POCKET OPTION] Requesting REAL data for USD/CHF...
+🔗 Loading Chart: https://pocketoption.com/en/otc/trade/USD_CHF
+⚠️ No candle data extracted from page globals
+⚠️ [POCKET OPTION] No candles returned for USD/CHF, trying demo fallback...
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] USD/CHF: type=WAIT, confidence=0%, trend=NEUTRAL, adx=55.0
+6:36:09 AM [express] POST /api/generate-signal 200 in 19801ms :: {"signal":null,"message":"No clear directional signal detected. Market is neutral.","confidence":0,"minimumRequired":70}
+🔍 [SIGNAL] Starting scan for EUR/JPY (Source: AUTO)
+🔄 [POCKET OPTION] Requesting REAL data for EUR/JPY...
+🔗 Loading Chart: https://pocketoption.com/en/otc/trade/EUR_JPY
+⚠️ No candle data extracted from page globals
+⚠️ [POCKET OPTION] No candles returned for USD/CHF, trying demo fallback...
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] USD/CHF: type=WAIT, confidence=0%, trend=NEUTRAL, adx=35.5
+6:36:23 AM [express] POST /api/generate-signal 200 in 18796ms :: {"signal":null,"message":"No clear directional signal detected. Market is neutral.","confidence":0,"minimumRequired":70}
+🔍 [SIGNAL] Starting scan for EUR/JPY (Source: AUTO)
+🔄 [POCKET OPTION] Requesting REAL data for EUR/JPY...
+🔗 Loading Chart: https://pocketoption.com/en/otc/trade/EUR_JPY
+❌ Data fetch error: Error: Execution context was destroyed, most likely because of a navigation.
+⚠️ [POCKET OPTION] No candles returned for EUR/JPY, trying demo fallback...
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] EUR/JPY: type=WAIT, confidence=0%, trend=NEUTRAL, adx=56.1
+6:36:42 AM [express] POST /api/generate-signal 200 in 31306ms :: {"signal":null,"message":"No clear directional signal detected. Market is neutral.","confidence":0,"minimumRequired":70}
+🔍 [SIGNAL] Starting scan for AUD/USD (Source: AUTO)
+🔄 [POCKET OPTION] Requesting REAL data for AUD/USD...
+🔗 Loading Chart: https://pocketoption.com/en/otc/trade/AUD_USD
+⚠️ [POCKET OPTION] No candles returned for EUR/JPY, trying demo fallback...
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] EUR/JPY: type=WAIT, confidence=0%, trend=NEUTRAL, adx=79.3
+⚠️ No candle data extracted from page globals
+6:38:18 AM [express] POST /api/generate-signal 200 in 114542ms :: {"signal":null,"message":"No clear directional signal detected. Market is neutral.","confidence":0,"minimumRequired":70}
+🔍 [SIGNAL] Starting scan for AUD/USD (Source: AUTO)
+🔄 [POCKET OPTION] Requesting REAL data for AUD/USD...
+🔗 Loading Chart: https://pocketoption.com/en/otc/trade/AUD_USD
+⚠️ No candle data extracted from page globals
+⚠️ [POCKET OPTION] No candles returned for AUD/USD, trying demo fallback...
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] AUD/USD: type=WAIT, confidence=0%, trend=NEUTRAL, adx=43.1
+6:38:24 AM [express] POST /api/generate-signal 200 in 101319ms :: {"signal":null,"message":"No clear directional signal detected. Market is neutral.","confidence":0,"minimumRequired":70}
+🔍 [SIGNAL] Starting scan for USD/CAD (Source: AUTO)
+🔄 [POCKET OPTION] Requesting REAL data for USD/CAD...
+🔗 Loading Chart: https://pocketoption.com/en/otc/trade/USD_CAD
+⚠️ No candle data extracted from page globals
+⚠️ [POCKET OPTION] No candles returned for AUD/USD, trying demo fallback...
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] AUD/USD: type=WAIT, confidence=0%, trend=NEUTRAL, adx=37.6
+6:39:18 AM [express] POST /api/generate-signal 200 in 58966ms :: {"signal":null,"message":"No clear directional signal detected. Market is neutral.","confidence":0,"minimumRequired":70}
+🔍 [SIGNAL] Starting scan for USD/CAD (Source: AUTO)
+🔄 [POCKET OPTION] Requesting REAL data for USD/CAD...
+🔗 Loading Chart: https://pocketoption.com/en/otc/trade/USD_CAD
