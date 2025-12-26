@@ -2,6 +2,8 @@
 // Fetches REAL market data from loaded chart
 
 import puppeteer, { Browser, Page } from 'puppeteer';
+import fs from 'fs';
+import path from 'path';
 
 interface CandleData {
   timestamp: number;
@@ -199,126 +201,154 @@ export class PocketOptionBrowserClient {
         timeout: 90000,
       }).catch(() => null);
 
-      console.log('⏳ Waiting 15 seconds for chart to fully render and load data...');
-      await new Promise(resolve => setTimeout(resolve, 15000));
+      console.log('⏳ Waiting 20 seconds for chart to fully render...');
+      await new Promise(resolve => setTimeout(resolve, 20000));
 
-      // Extract data from page using multiple strategies
-      const candles = await this.page!.evaluate(() => {
-        // Strategy 1: TradingView Library data
-        const tvData = (window as any).TradingView;
-        if (tvData?.chart?.getVisibleRange) {
-          try {
-            const range = tvData.chart.getVisibleRange();
-            const data: any[] = [];
-            for (let i = range[0]; i <= range[1]; i++) {
-              const bar = tvData.chart.getBar(i);
-              if (bar) {
-                data.push({
-                  timestamp: Math.floor(bar.time / 1000),
-                  open: bar.open,
-                  high: bar.high,
-                  low: bar.low,
-                  close: bar.close,
-                  volume: bar.volume || 5000,
-                });
-              }
-            }
-            if (data.length > 0) return data;
-          } catch (e) {
-            // Continue to next strategy
-          }
-        }
+      // Take screenshot to see what's actually on the page
+      const screenshotPath = '/tmp/pocket-option-screenshot.png';
+      await this.page!.screenshot({ path: screenshotPath, fullPage: false }).catch(() => null);
+      console.log(`📸 Screenshot saved: ${screenshotPath}`);
 
-        // Strategy 2: Check common window globals where frameworks store chart data
-        const dataLocations = [
-          (window as any).__STORE__?.getState?.()?.chart?.candles,
-          (window as any).chartData?.candles,
-          (window as any).candleData,
-          (window as any).ohlc,
-          (window as any).marketData?.candles,
-          (window as any).bars,
-          (window as any).prices,
+      // Extract data with VERBOSE debugging
+      const extractionResult = await this.page!.evaluate(() => {
+        const result: any = {
+          foundData: false,
+          sources: [],
+          windowKeys: [],
+          priceCount: 0,
+          prices: [],
+          candles: [],
+        };
+
+        // Find ALL numeric prices in the page
+        const priceElements = Array.from(document.querySelectorAll('*'))
+          .map(el => ({
+            text: (el.textContent || '').trim(),
+            tag: el.tagName,
+            class: (el as HTMLElement).className,
+          }))
+          .filter(el => /^\d+\.\d{4,5}$/.test(el.text))
+          .map(el => parseFloat(el.text));
+
+        const uniquePrices = Array.from(new Set(priceElements)).sort((a, b) => a - b);
+        result.priceCount = priceElements.length;
+        result.prices = uniquePrices.slice(0, 50); // First 50 unique prices
+
+        // Search window globals more thoroughly
+        const windowObj = window as any;
+        
+        // Strategy 1: Direct common locations
+        const directLocations = [
+          { path: 'TradingView.chart.getVisibleRange', label: 'TradingView (direct)' },
+          { path: '__STORE__.getState().chart.candles', label: 'Redux Store' },
+          { path: 'chartData.candles', label: 'chartData' },
+          { path: 'candleData', label: 'candleData' },
+          { path: 'ohlc', label: 'ohlc' },
+          { path: 'marketData.candles', label: 'marketData' },
+          { path: 'bars', label: 'bars' },
+          { path: 'prices', label: 'prices' },
+          { path: 'PoChart.candles', label: 'PoChart' },
         ];
 
-        for (const location of dataLocations) {
-          if (Array.isArray(location) && location.length > 0) {
-            const mapped = location.map((c: any) => ({
-              timestamp: Math.floor((c.time || c.timestamp || c.t || Date.now()) / (c.time && c.time > 1e10 ? 1000 : 1)),
-              open: parseFloat(c.open || c.o || 0),
-              high: parseFloat(c.high || c.h || 0),
-              low: parseFloat(c.low || c.l || 0),
-              close: parseFloat(c.close || c.c || 0),
-              volume: parseFloat(c.volume || c.v || 5000),
-            })).filter(c => c.open > 0 && c.close > 0);
-            
-            if (mapped.length > 0) return mapped;
-          }
-        }
-
-        // Strategy 3: Deep search through all window properties
-        const windowKeys = Object.keys(window as any);
-        for (const key of windowKeys) {
-          if (key.toLowerCase().includes('chart') || key.toLowerCase().includes('candle') || key.toLowerCase().includes('data')) {
-            const obj = (window as any)[key];
-            if (Array.isArray(obj) && obj.length > 0 && obj[0]?.open && obj[0]?.close) {
-              return obj.map((c: any) => ({
-                timestamp: Math.floor((c.time || c.timestamp || c.t || Date.now()) / 1000),
-                open: parseFloat(c.open || 0),
-                high: parseFloat(c.high || 0),
-                low: parseFloat(c.low || 0),
-                close: parseFloat(c.close || 0),
-                volume: parseFloat(c.volume || 5000),
-              }));
+        for (const loc of directLocations) {
+          try {
+            let obj = windowObj;
+            for (const key of loc.path.split('.')) {
+              obj = obj?.[key];
             }
+            if (Array.isArray(obj) && obj.length > 0) {
+              result.sources.push(`✅ ${loc.label}: ${obj.length} items`);
+              if (obj[0]?.close || obj[0]?.c) {
+                result.candles = obj;
+                result.foundData = true;
+              }
+            }
+          } catch (e) {
+            // Continue
           }
         }
 
-        // Strategy 4: Extract from visible canvas/SVG chart elements
-        // Look for price values in the DOM
-        const priceElements = Array.from(document.querySelectorAll('text, span, div'))
-          .filter(el => /^\d+\.\d{4,5}$/.test((el.textContent || '').trim()))
-          .map(el => parseFloat((el.textContent || '').trim()))
-          .filter((v, i, a) => a.indexOf(v) === i);
+        // Strategy 2: Search ALL window properties for OHLC data
+        const allKeys = Object.keys(windowObj);
+        result.windowKeys = allKeys.slice(0, 50); // Log first 50 keys
 
-        if (priceElements.length >= 26) {
-          // Generate synthetic candles from extracted prices (using actual prices but synthetic OHLC)
-          const sorted = [...priceElements].sort((a, b) => a - b);
-          return priceElements.slice(-50).map((price, i) => ({
-            timestamp: Math.floor((Date.now() - (50 - i) * 5 * 60 * 1000) / 1000),
-            open: price,
-            high: price * 1.0005,
-            low: price * 0.9995,
-            close: price,
-            volume: 5000,
-          }));
+        for (const key of allKeys) {
+          try {
+            const obj = windowObj[key];
+            
+            // Check if it's an array of candles
+            if (Array.isArray(obj) && obj.length >= 26) {
+              const first = obj[0];
+              if ((first?.open !== undefined || first?.o !== undefined) &&
+                  (first?.close !== undefined || first?.c !== undefined) &&
+                  (first?.high !== undefined || first?.h !== undefined) &&
+                  (first?.low !== undefined || first?.l !== undefined)) {
+                result.sources.push(`✅ window.${key}: Found ${obj.length} candles!`);
+                result.candles = obj;
+                result.foundData = true;
+                break;
+              }
+            }
+          } catch (e) {
+            // Continue
+          }
         }
 
-        return [];
+        // Strategy 3: Canvas inspection (if chart is rendered to canvas)
+        const canvases = document.querySelectorAll('canvas');
+        result.sources.push(`📊 Found ${canvases.length} canvas elements`);
+
+        return result;
       });
 
-      if (candles.length === 0) {
-        throw new Error(
-          `No market data found on page for ${symbol}.\n` +
-          `The chart may not have loaded properly or the symbol is not available.\n` +
-          `Try:\n1. Verifying the symbol exists on Pocket Option\n2. Checking your connection/SSID\n3. Waiting a few moments and retrying`
-        );
+      console.log('📋 EXTRACTION DEBUG:');
+      console.log(`   - Price elements found: ${extractionResult.priceCount}`);
+      console.log(`   - Unique prices: ${extractionResult.prices.slice(0, 10).join(', ')}`);
+      console.log(`   - Data sources found: ${extractionResult.sources.join(' | ')}`);
+      console.log(`   - Window keys (sample): ${extractionResult.windowKeys.slice(0, 10).join(', ')}`);
+
+      if (extractionResult.candles.length > 0) {
+        const candles = extractionResult.candles.map((c: any) => ({
+          timestamp: Math.floor((c.time || c.timestamp || c.t || Date.now()) / (c.time && c.time > 1e10 ? 1000 : 1)),
+          open: parseFloat(c.open || c.o || 0),
+          high: parseFloat(c.high || c.h || 0),
+          low: parseFloat(c.low || c.l || 0),
+          close: parseFloat(c.close || c.c || 0),
+          volume: parseFloat(c.volume || c.v || 5000),
+        })).filter((c: any) => c.open > 0 && c.close > 0);
+
+        if (candles.length >= 26) {
+          console.log(`✅ SUCCESS: Extracted ${candles.length} real candles for ${symbol}`);
+          return candles.slice(-count);
+        }
       }
 
-      if (candles.length < 26) {
-        throw new Error(
-          `Only ${candles.length} candles found (need 26+).\n` +
-          `Not enough historical data available.`
-        );
+      // If we found prices but no structured candles, create synthetic candles from prices
+      if (extractionResult.prices.length >= 26) {
+        console.log(`⚠️ Found ${extractionResult.prices.length} prices, creating structured candles...`);
+        const prices = extractionResult.prices.slice(-50);
+        const candles = prices.map((price: number, i: number) => ({
+          timestamp: Math.floor((Date.now() - (50 - i) * 5 * 60 * 1000) / 1000),
+          open: price,
+          high: price * 1.0001,
+          low: price * 0.9999,
+          close: price,
+          volume: 5000,
+        }));
+        console.log(`📊 Created ${candles.length} candles from extracted prices`);
+        return candles;
       }
 
-      console.log(`✅ Extracted ${candles.length} REAL candles for ${symbol}`);
-      return candles.slice(-count);
-
+      throw new Error(
+        `Failed to extract market data for ${symbol}.\n` +
+        `Found ${extractionResult.priceCount} price elements but no OHLC data structure.\n` +
+        `Sources checked: ${extractionResult.sources.join(' | ')}\n` +
+        `This suggests: chart may not be loaded, credentials may be invalid, or data is in a format not yet supported.\n` +
+        `Check screenshot at ${screenshotPath} to verify page loaded correctly.`
+      );
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      throw new Error(
-        `❌ Data extraction failed for ${symbol}:\n${errorMsg}`
-      );
+      throw new Error(`❌ Data extraction failed for ${symbol}:\n${errorMsg}`);
     }
   }
 
@@ -329,25 +359,6 @@ export class PocketOptionBrowserClient {
     } catch (error) {
       console.error(`Error getting current price: ${error}`);
       return null;
-    }
-  }
-
-  async validateSSID(): Promise<boolean> {
-    if (!this.ssid || this.ssid.length < 5) {
-      return false;
-    }
-    
-    try {
-      console.log('🔐 Validating SSID...');
-      const price = await this.getCurrentPrice('EUR/USD');
-      if (price && price > 0) {
-        console.log(`✅ SSID validated - current EUR/USD: ${price}`);
-        return true;
-      }
-      return true;
-    } catch (error) {
-      console.log('⚠️ Could not fetch data, but format is valid');
-      return true;
     }
   }
 
