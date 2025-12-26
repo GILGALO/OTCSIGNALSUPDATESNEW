@@ -27,23 +27,8 @@ export class PocketOptionClient {
   async getM5Candles(symbol: string, count: number = 50): Promise<CandleData[]> {
     console.log(`🔄 [POCKET OPTION] Requesting REAL market data for ${symbol}...`);
     
-    // Try direct API first (faster, more reliable)
-    if (this.ssid) {
-      try {
-        console.log('📡 Trying direct API...');
-        const apiClient = createPocketOptionAPIClient(this.ssid);
-        const candles = await apiClient.getM5Candles(symbol, count);
-        if (candles.length >= 26) {
-          console.log(`✅ Got ${candles.length} candles via direct API`);
-          return candles;
-        }
-      } catch (apiError) {
-        console.log(`⚠️ Direct API failed, falling back to browser automation...`);
-      }
-    }
-
-    // Fallback to browser automation
-    console.log('🌐 Using browser automation...');
+    // Use browser automation to extract real chart data
+    console.log('🌐 Loading Pocket Option page and extracting real chart data...');
     const client = await getPocketOptionBrowserClient(this.ssid || "", this.email, this.password);
     const candles = await client.getM5Candles(symbol, count);
     
