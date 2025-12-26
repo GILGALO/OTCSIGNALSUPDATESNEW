@@ -38,11 +38,20 @@ export class PocketOptionBrowserClient {
           '--disable-plugins',
           '--disable-default-apps',
           '--no-first-run',
+          '--no-zygote',
+          '--single-process',
           '--js-flags="--max-old-space-size=256"', // Limit V8 memory
+          '--mute-audio',
+          '--disable-breakpad',
+          '--disable-canvas-aa',
+          '--disable-2d-canvas-clip-aa',
+          '--disable-gl-drawing-for-tests'
         ],
+        protocolTimeout: 60000,
       };
 
       // Try to resolve Chrome executable path (important for Render)
+      let chromePath: string | undefined;
       try {
         const isRender = process.env.RENDER === 'true';
         const renderPath = process.env.PUPPETEER_EXECUTABLE_PATH;
@@ -59,25 +68,23 @@ export class PocketOptionBrowserClient {
             '/usr/bin/google-chrome-stable'
           ].filter(Boolean) as string[];
 
-          let foundPath = null;
           for (const p of renderCachePaths) {
             try {
               if (require('fs').existsSync(p)) {
-                foundPath = p;
+                chromePath = p;
                 break;
               }
             } catch (e) {}
           }
 
-          if (foundPath) {
-            console.log(`📍 Found Chrome at: ${foundPath}`);
-            launchOptions.executablePath = foundPath;
+          if (chromePath) {
+            console.log(`📍 Found Chrome at: ${chromePath}`);
           } else {
             console.log("⚠️ No specific Render path found, letting Puppeteer resolve...");
           }
         } else if (renderPath) {
           console.log(`📍 Using configured Chrome path: ${renderPath}`);
-          launchOptions.executablePath = renderPath;
+          chromePath = renderPath;
         } else {
           // Fallback discovery for Render.com common paths
           const possiblePaths = [
@@ -87,24 +94,22 @@ export class PocketOptionBrowserClient {
             '/opt/render/project/.cache/puppeteer/chrome/linux-133.0.6943.126/chrome-linux64/chrome'
           ];
           
-          let foundPath = null;
           for (const path of possiblePaths) {
             try {
               if (require('fs').existsSync(path)) {
-                foundPath = path;
+                chromePath = path;
                 break;
               }
             } catch (e) {}
           }
 
-          if (foundPath) {
-            console.log(`📍 Found Chrome at: ${foundPath}`);
-            launchOptions.executablePath = foundPath;
+          if (chromePath) {
+            console.log(`📍 Found Chrome at: ${chromePath}`);
           } else {
             const execPath = await (puppeteer as any).resolveExecutable?.();
             if (execPath) {
               console.log(`📍 Using auto-resolved Chrome from: ${execPath}`);
-              launchOptions.executablePath = execPath;
+              chromePath = execPath;
             }
           }
         }
@@ -112,7 +117,30 @@ export class PocketOptionBrowserClient {
         console.log('ℹ️ Chrome auto-detection skipped, letting Puppeteer find it');
       }
       
-      this.browser = await puppeteer.launch(launchOptions);
+      this.browser = await puppeteer.launch({
+        headless: true,
+        executablePath: chromePath,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--disable-extensions',
+          '--disable-sync',
+          '--disable-plugins',
+          '--disable-default-apps',
+          '--no-first-run',
+          '--no-zygote',
+          '--single-process',
+          '--js-flags="--max-old-space-size=300"',
+          '--mute-audio',
+          '--disable-breakpad',
+          '--disable-canvas-aa',
+          '--disable-2d-canvas-clip-aa',
+          '--disable-gl-drawing-for-tests'
+        ],
+        protocolTimeout: 300000,
+      });
 
       this.page = await this.browser.newPage();
       
@@ -124,16 +152,24 @@ export class PocketOptionBrowserClient {
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       );
 
-      console.log('📱 Navigating to Pocket Option...');
-      
-      // Navigate to Pocket Option with extended timeout and wait for a specific element
-      try {
-        await this.page.goto('https://pocketoption.com', {
-          waitUntil: 'domcontentloaded', 
-          timeout: 45000,
-        });
-      } catch (gotoError) {
-        console.warn('⚠️ Initial navigation timeout or error, continuing anyway...');
+      // Navigate to Pocket Option login page with retry logic
+      const maxRetries = 2;
+      for (let i = 0; i <= maxRetries; i++) {
+        try {
+          console.log(`📱 Navigating to Pocket Option (Attempt ${i+1}/${maxRetries+1})...`);
+          await this.page.goto('https://pocketoption.com/en/login', {
+            waitUntil: 'domcontentloaded', 
+            timeout: 60000,
+          });
+          break; // Success
+        } catch (gotoError) {
+          if (i === maxRetries) {
+            console.warn('⚠️ All initial navigation attempts timed out, trying to proceed anyway...');
+          } else {
+            console.warn(`⚠️ Navigation attempt ${i+1} failed, retrying...`);
+            await new Promise(r => setTimeout(r, 2000));
+          }
+        }
       }
 
       // Try to authenticate with SSID if provided
@@ -287,7 +323,7 @@ export class PocketOptionBrowserClient {
           '.current-price', '.price-value', '[class*="price"]', 
           '.candle-container', '.chart-container', '.po-chart-price',
           '[data-testid="current-price"]', '.trading-chart-price',
-          '.asset-price', '.price-now'
+          '.asset-price', '.price-now', '.value___Yv3rA', '.price___2v3rA'
         ];
         
         let foundPrice = 0;

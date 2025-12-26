@@ -1,0 +1,25 @@
+Chrome at: /opt/render/project/.cache/puppeteer/chrome/linux-143.0.7499.169/chrome-linux64/chrome
+⚠️ Initial navigation timeout or error, continuing anyway...
+🔐 Attempting authentication with SSID...
+⚠️ Real market unavailable: Error: Failed to connect to Pocket Option browser client. Using demo data.
+📊 Generating demo market data for testing (Render will use REAL data)...
+❌ Browser connection failed: TimeoutError: Timed out after 30000 ms while waiting for the WS endpoint URL to appear in stdout!
+✅ Generated 26 demo candles for testing
+    at ChromeLauncher.launch (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserLauncher.js:180:23)
+    at async Zd.connect (/opt/render/project/src/dist/index.cjs:70:104762)
+    at async Lw (/opt/render/project/src/dist/index.cjs:73:1458)
+    at async Jd.getM5Candles (/opt/render/project/src/dist/index.cjs:73:1721)
+    at async /opt/render/project/src/dist/index.cjs:94:6117
+📊 [SIGNAL] GBP/USD: type=WAIT, confidence=0%, trend=NEUTRAL, adx=15.9
+12:54:20 AM [express] POST /api/generate-signal 200 in 30501ms :: {"signal":null,"message":"No clear directional signal detected. Market is neutral.","confidence":0,"minimumRequired":60}
+❌ Browser connection failed: TimeoutError: Timed out after 30000 ms while waiting for the WS endpoint URL to appear in stdout!
+⚠️ Real market unavailable: Error: Failed to connect to Pocket Option browser client. Using demo data.
+    at ChromeLauncher.launch (/opt/render/project/src/node_modules/puppeteer-core/lib/cjs/puppeteer/node/BrowserLauncher.js:180:23)
+    at async Zd.connect (/opt/render/project/src/dist/index.cjs:70:104762)
+    at async Lw (/opt/render/project/src/dist/index.cjs:73:1458)
+    at async Jd.getM5Candles (/opt/render/project/src/dist/index.cjs:73:1721)
+    at async /opt/render/project/src/dist/index.cjs:94:6117
+📊 Generating demo market data for testing (Render will use REAL data)...
+✅ Generated 26 demo candles for testing
+📊 [SIGNAL] GBP/USD: type=WAIT, confidence=0%, trend=NEUTRAL, adx=54.4
+12:54:21 AM [express] POST /api/generate-signal 200 in 30302ms :: {"signal":null,"message":"No clear directional signal detected. Market is neutral.","confidence":0,"minimumRequired":60}
