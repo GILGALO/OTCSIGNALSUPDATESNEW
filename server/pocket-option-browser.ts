@@ -21,6 +21,7 @@ export class PocketOptionBrowserClient {
   private password: string | null = null;
   private ssid: string | null = null;
   private isConnected = false;
+  private lastAccess = Date.now();
 
   constructor(ssid: string, email?: string, password?: string) {
     this.ssid = ssid || null;
@@ -67,7 +68,14 @@ export class PocketOptionBrowserClient {
           '--disable-extensions',
           '--js-flags="--max-old-space-size=128"',
           '--disable-web-security',
-          '--disable-features=IsolateOrigins,site-per-process,Translate,PasswordImport,Autofill'
+          '--disable-features=IsolateOrigins,site-per-process,Translate,PasswordImport,Autofill',
+          '--disable-ipc-flooding-protection',
+          '--disable-background-networking',
+          '--disable-default-apps',
+          '--disable-sync',
+          '--metrics-recording-only',
+          '--mute-audio',
+          '--no-pings'
         ],
         ignoreHTTPSErrors: true
       });
@@ -81,6 +89,8 @@ export class PocketOptionBrowserClient {
 
   async connect(): Promise<boolean> {
     try {
+      this.lastAccess = Date.now();
+      
       if (this.isConnected && this.page) {
         try {
           await this.page.evaluate(() => 1);
@@ -192,6 +202,7 @@ export class PocketOptionBrowserClient {
   }
 
   async getM5Candles(symbol: string, count: number = 50): Promise<CandleData[]> {
+    this.lastAccess = Date.now();
     if (!this.isConnected || !this.page) {
       await this.connect();
     }
@@ -241,6 +252,7 @@ export class PocketOptionBrowserClient {
   }
 
   async close(): Promise<void> {
+    // Only close the page, not the browser singleton
     if (this.page) {
       await this.page.close().catch(() => null);
       this.page = null;
@@ -264,8 +276,9 @@ export async function getPocketOptionBrowserClient(
 }
 
 export function closeBrowserClient(): void {
+  // We keep the singleton alive to avoid re-launch overhead
   if (globalBrowser) {
     globalBrowser.close();
-    globalBrowser = null;
+    // Don't nullify globalBrowser to maintain singleton state
   }
 }
