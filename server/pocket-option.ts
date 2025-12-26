@@ -21,18 +21,17 @@ export class PocketOptionClient {
 
   async getM5Candles(symbol: string, count: number = 50): Promise<CandleData[]> {
     try {
-      console.log(`🔄 Attempting to fetch REAL market data for ${symbol}...`);
+      console.log(`🔄 [POCKET OPTION] Requesting REAL data for ${symbol}...`);
       const client = await getPocketOptionBrowserClient(this.ssid);
       const candles = await client.getM5Candles(symbol, count);
       
-      if (candles.length > 0) {
-        console.log(`✅ Got ${candles.length} REAL candles for ${symbol}`);
+      if (candles && candles.length > 0) {
+        console.log(`✅ [POCKET OPTION] Received ${candles.length} REAL candles for ${symbol}`);
         return candles;
       }
+      console.log(`⚠️ [POCKET OPTION] No candles returned for ${symbol}, trying demo fallback...`);
     } catch (error) {
-      console.log(`⚠️ Real market unavailable: ${error}. Using demo data.`);
-      // On Render or in production, we might want to throw if real data is required
-      // but for now we keep the demo fallback for stability.
+      console.log(`❌ [POCKET OPTION] Real market error: ${error}. Falling back to demo data.`);
       return this.generateDemoCandles(symbol, count);
     }
     

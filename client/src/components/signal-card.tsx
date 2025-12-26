@@ -47,9 +47,14 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
     let interval: NodeJS.Timeout;
     
     if (mode === 'AUTO' && isAutoActive) {
+      // Immediate first check
+      console.log('🤖 AUTO mode activated, starting initial scan...');
+      generateSignal();
+
       interval = setInterval(() => {
         setAutoTimer((prev) => {
           if (prev <= 1) {
+            console.log('⏰ Timer expired, starting scheduled scan...');
             generateSignal();
             return 10 * 60;
           }
@@ -59,7 +64,7 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
     }
 
     return () => clearInterval(interval);
-  }, [mode, isAutoActive, selectedAsset]);
+  }, [mode, isAutoActive]); // Only re-run when mode or activity status changes
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
