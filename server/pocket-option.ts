@@ -25,28 +25,22 @@ export class PocketOptionClient {
   }
 
   async getM5Candles(symbol: string, count: number = 50): Promise<CandleData[]> {
-    console.log(`🔄 [POCKET OPTION] Requesting market data for ${symbol}...`);
+    console.log(`🔄 [MARKET DATA] Fetching REAL market data for ${symbol}...`);
     
     try {
-      // Use browser automation to extract real chart data
-      console.log('🌐 Loading Pocket Option page and extracting market data...');
-      const client = await getPocketOptionBrowserClient(this.ssid || "", this.email, this.password);
-      const candles = await client.getM5Candles(symbol, count);
+      // Use real market data APIs instead of browser automation
+      const { fetchRealMarketData } = await import('./real-market-data');
+      const candles = await fetchRealMarketData(symbol, count);
       
       if (!candles || candles.length === 0) {
-        console.warn(`⚠️ No candles returned, will try demo fallback`);
-        throw new Error("No candles received");
+        throw new Error("No candles received from market data source");
       }
       
-      console.log(`✅ [POCKET OPTION] Received ${candles.length} market candles for ${symbol}`);
+      console.log(`✅ Received ${candles.length} REAL market candles for ${symbol}`);
       return candles;
     } catch (error) {
-      console.warn(`⚠️ Could not fetch real data: ${error}`);
-      console.log(`📊 Using realistic demo market data for ${symbol}...`);
-      
-      // Import and use the demo generator as a fallback
-      const { generateDemoM5Candles } = await import('./market-data-generator');
-      return generateDemoM5Candles(symbol, count);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to fetch real market data for ${symbol}: ${errorMsg}\nPlease ensure trading pair exists and market data APIs are accessible.`);
     }
   }
 
