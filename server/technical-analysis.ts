@@ -22,6 +22,9 @@ export interface TechnicalMetrics {
   adx: number;
   trend: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
   momentum: 'STRONG' | 'MODERATE' | 'WEAK';
+  volumeSignal: 'STRONG' | 'WEAK';
+  volatility: number;
+  priceLevel: 'SUPPORT' | 'RESISTANCE' | 'NEUTRAL';
 }
 
 // Calculate RSI (Relative Strength Index)
@@ -136,6 +139,62 @@ export function calculateADX(candles: Candle[], period: number = 14): number {
   return Math.min(100, di * 100);
 }
 
+// Calculate Volume Signal - detect volume spikes (conviction)
+export function analyzeVolumeSignal(candles: Candle[]): 'STRONG' | 'WEAK' {
+  if (candles.length < 10) return 'WEAK';
+  
+  const recentVolumes = candles.slice(-5).map(c => c.volume);
+  const historicalVolumes = candles.slice(-20, -5).map(c => c.volume);
+  
+  const avgRecent = recentVolumes.reduce((a, b) => a + b, 0) / recentVolumes.length;
+  const avgHistorical = historicalVolumes.reduce((a, b) => a + b, 0) / historicalVolumes.length;
+  
+  // Volume spike = 1.5x above average = strong conviction
+  return avgRecent > avgHistorical * 1.5 ? 'STRONG' : 'WEAK';
+}
+
+// Calculate Volatility - ATR (Average True Range)
+export function calculateVolatility(candles: Candle[]): number {
+  if (candles.length < 14) return 0;
+  
+  let trueRange = 0;
+  const period = Math.min(14, candles.length);
+  
+  for (let i = candles.length - period; i < candles.length; i++) {
+    const curr = candles[i];
+    const prev = candles[i - 1];
+    
+    const tr = Math.max(
+      curr.high - curr.low,
+      Math.abs(curr.high - prev.close),
+      Math.abs(curr.low - prev.close)
+    );
+    trueRange += tr;
+  }
+  
+  return trueRange / period;
+}
+
+// Detect Support/Resistance levels - bounce points
+export function detectPriceLevel(candles: Candle[], currentPrice: number): 'SUPPORT' | 'RESISTANCE' | 'NEUTRAL' {
+  if (candles.length < 20) return 'NEUTRAL';
+  
+  const recent = candles.slice(-20);
+  const lows = recent.map(c => c.low);
+  const highs = recent.map(c => c.high);
+  
+  const minLow = Math.min(...lows);
+  const maxHigh = Math.max(...highs);
+  const range = maxHigh - minLow;
+  
+  // Near support (bottom 30% of range) = likely bounce up
+  if (currentPrice < minLow + range * 0.35) return 'SUPPORT';
+  // Near resistance (top 30% of range) = likely bounce down
+  if (currentPrice > maxHigh - range * 0.35) return 'RESISTANCE';
+  
+  return 'NEUTRAL';
+}
+
 // Main analysis function
 export function analyzeCandles(candles: Candle[]): TechnicalMetrics {
   if (candles.length < 26) {
@@ -166,9 +225,12 @@ export function analyzeCandles(candles: Candle[]): TechnicalMetrics {
   const ema26 = calculateEMA(closes, 26);
   const stoch = calculateStochastic(candles);
   const adx = calculateADX(candles);
+  const volumeSignal = analyzeVolumeSignal(candles);
+  const volatility = calculateVolatility(candles);
+  const currentClose = closes[closes.length - 1];
+  const priceLevel = detectPriceLevel(candles, currentClose);
   
   // Determine trend - Refined for OTC
-  const currentClose = closes[closes.length - 1];
   let trend: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = 'NEUTRAL';
   
   const isSmaBullish = currentClose > sma20 && sma20 > sma50;
@@ -202,46 +264,50 @@ export function analyzeCandles(candles: Candle[]): TechnicalMetrics {
     adx,
     trend,
     momentum,
+    volumeSignal,
+    volatility,
+    priceLevel,
   };
 }
 
-// Generate signal based on technicals - HIGH PROBABILITY SETUP APPROACH
+// Generate signal based on technicals - WINNING TRADES APPROACH
 export function generateSignalFromTechnicals(metrics: TechnicalMetrics, currentPrice: number): { type: 'CALL' | 'PUT' | 'WAIT'; confidence: number } {
   let bullishScore = 0;
   let bearishScore = 0;
 
-  // MANDATORY ADX CHECK: Trend must be strong enough
-  // Without strong trend, the market is too choppy for reliable signals
+  // MANDATORY FILTERS FOR WINNING TRADES
+  // Market must be trending AND volume confirms = real money moving
   if (metrics.adx < 25) {
     return { type: 'WAIT', confidence: 0 };
   }
 
-  // 1. MACD - Trend direction with strength check (Weighted 3)
-  // Only count if histogram shows clear momentum
+  // Volume must spike (conviction) for winning trades
+  if (metrics.volumeSignal === 'WEAK') {
+    return { type: 'WAIT', confidence: 0 };
+  }
+
+  // 1. MACD - Trend direction (Weighted 3)
   if (metrics.macdHistogram > 0.001 && metrics.macdLine > metrics.macdSignal) {
     bullishScore += 3;
   } else if (metrics.macdHistogram < -0.001 && metrics.macdLine < metrics.macdSignal) {
     bearishScore += 3;
   }
 
-  // 2. Trend Alignment - SMA & EMA (Weighted 4)
-  // Strong alignment = higher probability
+  // 2. Trend Alignment - SMA & EMA (Weighted 4) - CORE SIGNAL
   if (metrics.trend === 'BULLISH') {
     bullishScore += 4;
   } else if (metrics.trend === 'BEARISH') {
     bearishScore += 4;
   }
 
-  // 3. RSI - Strict momentum validation (Weighted 3, increased weight)
-  // Avoid oversold/overbought extremes, prefer active momentum zones
+  // 3. RSI - Momentum validation (Weighted 3)
   if (metrics.rsi > 55 && metrics.rsi < 75) {
     bullishScore += 3;
   } else if (metrics.rsi < 45 && metrics.rsi > 25) {
     bearishScore += 3;
   }
 
-  // 4. ADX - Strong Trend Strength (Weighted 3, increased weight)
-  // Only when trend is very strong do we get the best wins
+  // 4. ADX - Strong Trend Strength (Weighted 3)
   if (metrics.adx > 35) {
     if (metrics.trend === 'BULLISH') bullishScore += 3;
     if (metrics.trend === 'BEARISH') bearishScore += 3;
@@ -250,8 +316,15 @@ export function generateSignalFromTechnicals(metrics: TechnicalMetrics, currentP
     if (metrics.trend === 'BEARISH') bearishScore += 1;
   }
 
-  // 5. Stochastic - Confirmation in right direction (Weighted 2, increased weight)
-  // Must align with trend direction to confirm
+  // 5. Support/Resistance bounce (Weighted 3) - WINNING ZONE
+  // Trading bounces off key levels has highest win rate
+  if (metrics.trend === 'BULLISH' && metrics.priceLevel === 'SUPPORT') {
+    bullishScore += 3;
+  } else if (metrics.trend === 'BEARISH' && metrics.priceLevel === 'RESISTANCE') {
+    bearishScore += 3;
+  }
+
+  // 6. Stochastic confirmation (Weighted 2)
   if (metrics.trend === 'BULLISH' && metrics.stochasticK > 55) {
     bullishScore += 2;
   } else if (metrics.trend === 'BEARISH' && metrics.stochasticK < 45) {
@@ -261,19 +334,18 @@ export function generateSignalFromTechnicals(metrics: TechnicalMetrics, currentP
   let type: 'CALL' | 'PUT' | 'WAIT' = 'WAIT';
   let confidence = 0;
 
-  // BALANCED CONSENSUS CALCULATION
-  // Max possible score is 15 (3+4+3+3+2)
-  // Require score of 7+ for more frequent signals, but with quality floor
-  // Score 7-8 = decent quality, Score 9+ = excellent quality
+  // WINNING TRADES REQUIREMENT
+  // Score 7+ = solid trade, Score 9+ = high conviction trade
+  // Volume + Trend alignment + Support/Resistance = winning combination
   const MIN_SCORE = 7;
 
   if (bullishScore >= MIN_SCORE && bullishScore > bearishScore) {
     type = 'CALL';
-    // Map score 7-15 to confidence 75-99 (more signals with solid confidence)
-    confidence = 75 + Math.round(((bullishScore - MIN_SCORE) / (15 - MIN_SCORE)) * 24);
+    // Score 7-18 to confidence 75-99
+    confidence = 75 + Math.round(((bullishScore - MIN_SCORE) / (18 - MIN_SCORE)) * 24);
   } else if (bearishScore >= MIN_SCORE && bearishScore > bullishScore) {
     type = 'PUT';
-    confidence = 75 + Math.round(((bearishScore - MIN_SCORE) / (15 - MIN_SCORE)) * 24);
+    confidence = 75 + Math.round(((bearishScore - MIN_SCORE) / (18 - MIN_SCORE)) * 24);
   }
 
   return { type, confidence };
