@@ -269,24 +269,45 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
               </div>
             </div>
 
-            <div className="w-full space-y-2 px-2 lg:px-3">
-              <div className="bg-black/40 border border-white/10 rounded-lg p-2 lg:p-3 space-y-2">
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="bg-white/5 p-1.5 lg:p-2 rounded">
-                    <p className="text-muted-foreground text-[9px] lg:text-[10px]">ENTRY</p>
-                    <p className="font-bold text-xs lg:text-sm">{signalData?.entryPrice.toFixed(5)}</p>
+            <div className="w-full space-y-3 px-2 lg:px-3">
+              <div className="bg-black/40 border border-white/10 rounded-lg p-3 lg:p-4 space-y-3 font-mono">
+                <div className="space-y-2 text-sm lg:text-base">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">📊 Pair:</span>
+                    <span className="font-bold text-foreground">{scannedAsset || selectedAsset}</span>
                   </div>
-                  <div className="bg-white/5 p-1.5 lg:p-2 rounded">
-                    <p className="text-muted-foreground text-[9px] lg:text-[10px]">STOP LOSS</p>
-                    <p className="font-bold text-xs lg:text-sm text-destructive">{signalData?.stopLoss.toFixed(5)}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">⚡ Type:</span>
+                    <span className={`font-bold flex items-center gap-1 ${signal === 'CALL' ? 'text-primary' : 'text-destructive'}`}>
+                      {signal === 'CALL' ? '🟢 BUY/CALL' : '🔴 SELL/PUT'}
+                    </span>
                   </div>
-                  <div className="bg-white/5 p-1.5 lg:p-2 rounded">
-                    <p className="text-muted-foreground text-[9px] lg:text-[10px]">TAKE PROFIT</p>
-                    <p className="font-bold text-xs lg:text-sm text-primary">{signalData?.takeProfit.toFixed(5)}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">⏱ Timeframe:</span>
+                    <span className="font-bold text-foreground">M5</span>
                   </div>
-                  <div className="bg-white/5 p-1.5 lg:p-2 rounded">
-                    <p className="text-muted-foreground text-[9px] lg:text-[10px]">CONFIDENCE</p>
-                    <p className="font-bold text-xs lg:text-sm">{confidence}%</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">⏰ Start Time:</span>
+                    <span className="font-bold text-foreground">
+                      {signalData?.entryTime ? format(new Date(signalData.entryTime), 'HH:mm') : '--:--'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">🏁 End Time:</span>
+                    <span className="font-bold text-foreground">
+                      {signalData?.expiryTime ? format(new Date(signalData.expiryTime), 'HH:mm') : '--:--'}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="pt-2 border-t border-white/5 grid grid-cols-2 gap-2 text-[10px] lg:text-xs">
+                  <div className="bg-white/5 p-1.5 rounded">
+                    <p className="text-muted-foreground text-[9px]">ENTRY</p>
+                    <p className="font-bold">{signalData?.entryPrice.toFixed(5)}</p>
+                  </div>
+                  <div className="bg-white/5 p-1.5 rounded">
+                    <p className="text-muted-foreground text-[9px]">CONFIDENCE</p>
+                    <p className="font-bold">{confidence}%</p>
                   </div>
                 </div>
               </div>
