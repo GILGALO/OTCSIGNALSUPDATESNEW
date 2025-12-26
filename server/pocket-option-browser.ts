@@ -295,11 +295,16 @@ export class PocketOptionBrowserClient {
         return candles.slice(-count);
       }
 
-      console.warn('⚠️ No candle data extracted from page - neither API nor window globals');
-      return [];
+      throw new Error(
+        `Failed to extract real market data for ${symbol} from Pocket Option.\n` +
+        `Neither API responses nor window globals contained candle data.\n` +
+        `This usually means: credentials are invalid, page didn't load properly, or symbol doesn't exist.`
+      );
     } catch (error) {
-      console.error(`❌ Data fetch error: ${error}`);
-      return [];
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `❌ Pocket Option data extraction failed for ${symbol}:\n${errorMsg}`
+      );
     }
   }
 
