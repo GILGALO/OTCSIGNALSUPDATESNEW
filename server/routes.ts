@@ -403,5 +403,124 @@ export async function registerRoutes(
     }
   });
 
+  // Generate signal from manual OTC price input
+  app.post("/api/generate-signal-manual", async (req, res) => {
+    try {
+      const { symbol, price } = req.body;
+      
+      if (!symbol || typeof price !== 'number' || price <= 0) {
+        return res.status(400).json({ error: "Invalid symbol or price" });
+      }
+
+      console.log(`🎯 [MANUAL] Generating signal for ${symbol} at price ${price}`);
+
+      // Create synthetic 26 candles from the single price (for technical analysis)
+      // This allows us to run full analysis on manually-entered price
+      const now = Date.now() / 1000;
+      const candles = [];
+      
+      // Generate 26 candles: 25 historical + 1 current
+      for (let i = 25; i >= 0; i--) {
+        const timestamp = Math.floor(now - i * 5 * 60);
+        const variation = (Math.random() - 0.5) * price * 0.0008; // Small random variation
+        const candlePrice = price + variation;
+        
+        candles.push({
+          timestamp,
+          open: candlePrice + (Math.random() - 0.5) * price * 0.0003,
+          high: candlePrice + Math.abs(Math.random()) * price * 0.0005,
+          low: candlePrice - Math.abs(Math.random()) * price * 0.0005,
+          close: candlePrice,
+          volume: 5000 + Math.random() * 5000,
+        });
+      }
+
+      // Analyze the candles
+      const analysisCandles = candles.map(c => ({
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+        volume: c.volume,
+      }));
+
+      const metrics = analyzeCandles(analysisCandles);
+      const currentPrice = candles[candles.length - 1].close;
+      const { type, confidence } = generateSignalFromTechnicals(metrics, currentPrice);
+      
+      console.log(`📊 [MANUAL] ${symbol}: type=${type}, confidence=${confidence}%, trend=${metrics.trend}`);
+
+      const MINIMUM_CONFIDENCE_THRESHOLD = 60; // Slightly lower for manual input
+
+      if (type === "WAIT") {
+        return res.json({
+          signal: null,
+          message: "No clear directional signal detected. Market is neutral.",
+          confidence,
+          minimumRequired: MINIMUM_CONFIDENCE_THRESHOLD
+        });
+      }
+
+      if (confidence < MINIMUM_CONFIDENCE_THRESHOLD) {
+        return res.json({
+          signal: null,
+          message: `Signal too weak (${confidence}% < ${MINIMUM_CONFIDENCE_THRESHOLD}% required)`,
+          confidence,
+          minimumRequired: MINIMUM_CONFIDENCE_THRESHOLD
+        });
+      }
+
+      // Calculate entry, SL, TP based on manual price
+      const slippage = 0.15;
+      const profitTarget = 0.30;
+      const entryPrice = price;
+      const stopLoss = type === "CALL" ? entryPrice - slippage : entryPrice + slippage;
+      const takeProfit = type === "CALL" ? entryPrice + profitTarget : entryPrice - profitTarget;
+
+      const now_date = new Date();
+      const analysisStartTime = addMinutes(now_date, -10);
+      const analysisEndTime = now_date;
+      const entryTime = calculateM5CandleEntryTime();
+      const expiryTime = addMinutes(entryTime, 5);
+
+      // Create signal in database
+      const signal = await storage.createSignal({
+        symbol,
+        signalType: type,
+        source: "MANUAL",
+        confidence,
+        entryPrice: entryPrice.toString(),
+        stopLoss: stopLoss.toString(),
+        takeProfit: takeProfit.toString(),
+        analysisStartTime,
+        analysisEndTime,
+        entryTime,
+        expiryTime,
+        technicals: metrics,
+      });
+
+      console.log(`✅ [MANUAL] Signal created for ${symbol}`);
+
+      res.json({
+        signal: {
+          id: signal.id,
+          signalType: signal.signalType,
+          confidence: signal.confidence,
+          entryPrice: parseFloat(signal.entryPrice),
+          stopLoss: parseFloat(signal.stopLoss),
+          takeProfit: parseFloat(signal.takeProfit),
+          entryTime: signal.entryTime,
+          expiryTime: signal.expiryTime,
+          technicals: signal.technicals,
+        },
+        message: `${type} signal generated from manual price input`
+      });
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      console.error(`❌ [MANUAL] Error: ${errorMsg}`);
+      res.status(500).json({ error: errorMsg });
+    }
+  });
+
   return httpServer;
 }

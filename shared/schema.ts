@@ -67,3 +67,9 @@ export type Candle = typeof candles.$inferSelect;
 export type Signal = typeof signals.$inferSelect;
 export type InsertCandle = z.infer<typeof insertCandleSchema>;
 export type InsertSignal = z.infer<typeof insertSignalSchema>;
+
+// Manual OTC Price Input Schema
+export const manualOTCSignalSchema = z.object({
+  symbol: z.string().min(1),
+  price: z.number().positive(),
+});

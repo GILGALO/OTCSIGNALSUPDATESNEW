@@ -5,6 +5,7 @@ import { ArrowUp, ArrowDown, Zap, Crosshair, Timer, Radio, PauseCircle, CheckCir
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { format, addMinutes } from 'date-fns';
+import { OTCManualInput } from './otc-manual-input';
 
 interface SignalCardProps {
   mode: 'AUTO' | 'MANUAL';
@@ -42,6 +43,20 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
   const [signalData, setSignalData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [scannedAsset, setScannedAsset] = useState<string>('');
+  
+  // MANUAL mode signal handler
+  const handleManualSignal = (generatedSignal: any) => {
+    if (generatedSignal) {
+      setSignal(generatedSignal.signalType as 'CALL' | 'PUT');
+      setConfidence(generatedSignal.confidence);
+      setSignalData(generatedSignal);
+      setLastSignalSent(`${generatedSignal.signalType} at ${new Date().toLocaleTimeString()}`);
+      
+      const expiryDate = new Date(generatedSignal.expiryTime);
+      const now = new Date();
+      setExpiryTime(Math.max(0, Math.floor((expiryDate.getTime() - now.getTime()) / 1000)));
+    }
+  };
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -61,6 +76,14 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
           return prev - 1;
         });
       }, 1000);
+    } else if (mode === 'MANUAL') {
+      // Reset state when switching to MANUAL
+      setSignal('WAIT');
+      setConfidence(0);
+      setExpiryTime(0);
+      setError(null);
+      setLastSignalSent(null);
+      setSignalData(null);
     }
 
     return () => clearInterval(interval);
@@ -244,14 +267,12 @@ export function SignalCard({ mode, isAutoActive = true, selectedAsset = 'EUR/USD
             )}
             
             {mode === 'MANUAL' ? (
-              <Button 
-                size="lg" 
-                className="bg-primary hover:bg-primary/90 text-background font-black tracking-wide px-6 lg:px-8 py-4 lg:py-6 text-sm lg:text-lg shadow-[0_0_30px_rgba(var(--primary),0.4)] transition-all hover:scale-105 active:scale-95"
-                onClick={generateSignal}
-              >
-                <Zap className="w-5 h-5 mr-2" />
-                GENERATE SIGNAL
-              </Button>
+              <div className="w-full max-w-sm px-2">
+                <OTCManualInput 
+                  selectedAsset={selectedAsset} 
+                  onSignalGenerated={handleManualSignal}
+                />
+              </div>
             ) : (
               <div className="text-center space-y-1">
                 <h3 className="text-base lg:text-lg font-bold text-muted-foreground">
