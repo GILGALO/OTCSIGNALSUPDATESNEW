@@ -12,21 +12,26 @@ interface CandleData {
 }
 
 export class PocketOptionDirectClient {
-  private ssid: string;
+  private ssid: string | null = null;
+  private sessionToken: string | null = null;
   private baseUrl = "https://web.po.market";
+  private email: string | null = null;
+  private password: string | null = null;
 
-  constructor(ssid: string) {
-    if (!ssid) {
-      throw new Error("SSID token is required");
+  constructor(ssid?: string, email?: string, password?: string) {
+    this.ssid = ssid || null;
+    this.email = email || null;
+    this.password = password || null;
+    
+    if (!this.ssid && !this.email) {
+      throw new Error("Either SSID token or email/password is required");
     }
-    this.ssid = ssid;
-    console.log(`✅ Pocket Option Direct Client initialized with SSID`);
+    console.log(`✅ Pocket Option Direct Client initialized`);
   }
 
-  private getHeaders() {
-    return {
+  private getHeaders(includeAuth: boolean = true) {
+    const headers: any = {
       "Content-Type": "application/json",
-      Cookie: `PHPSESSID=${this.ssid}`,
       "User-Agent":
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       Accept: "application/json, text/plain, */*",
@@ -35,6 +40,53 @@ export class PocketOptionDirectClient {
       Origin: "https://web.po.market",
       Referer: "https://web.po.market/",
     };
+
+    if (includeAuth) {
+      if (this.sessionToken) {
+        headers["Authorization"] = `Bearer ${this.sessionToken}`;
+      } else if (this.ssid) {
+        headers["Cookie"] = `PHPSESSID=${this.ssid}`;
+      }
+    }
+
+    return headers;
+  }
+
+  private async authenticate(): Promise<void> {
+    if (this.sessionToken) return; // Already authenticated
+    if (this.ssid) return; // Using SSID, no need to login
+
+    if (!this.email || !this.password) {
+      throw new Error("Email and password required for authentication");
+    }
+
+    try {
+      console.log(`🔐 Authenticating with Pocket Option...`);
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/api/auth/login`, {
+        method: "POST",
+        headers: this.getHeaders(false),
+        body: JSON.stringify({
+          email: this.email,
+          password: this.password,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Auth failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      this.sessionToken = data.token || data.sessionToken || data.session;
+
+      if (!this.sessionToken) {
+        throw new Error("No session token in auth response");
+      }
+
+      console.log(`✅ Successfully authenticated with Pocket Option`);
+    } catch (error) {
+      console.warn(`⚠️ Authentication failed: ${error}`);
+      throw error;
+    }
   }
 
   async getM5Candles(
@@ -42,10 +94,12 @@ export class PocketOptionDirectClient {
     count: number = 26
   ): Promise<CandleData[]> {
     console.log(
-      `🔄 Fetching real Pocket Option data for ${symbol} using SSID...`
+      `🔄 Fetching real Pocket Option data for ${symbol}...`
     );
 
     try {
+      // Authenticate if needed
+      await this.authenticate();
       // Try multiple API endpoints that Pocket Option might use
       const endpoints = [
         // Try common API paths
@@ -189,7 +243,9 @@ export class PocketOptionDirectClient {
 }
 
 export function createPocketOptionDirectClient(
-  ssid: string
+  ssid?: string,
+  email?: string,
+  password?: string
 ): PocketOptionDirectClient {
-  return new PocketOptionDirectClient(ssid);
+  return new PocketOptionDirectClient(ssid, email, password);
 }

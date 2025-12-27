@@ -28,11 +28,11 @@ export class PocketOptionClient {
   async getM5Candles(symbol: string, count: number = 50): Promise<CandleData[]> {
     console.log(`🔄 Attempting to fetch REAL data...`);
     
-    // FIRST: Try Pocket Option Direct API with SSID (if available)
-    if (this.ssid) {
+    // FIRST: Try Pocket Option Direct API with SSID or Email/Password
+    if (this.ssid || this.email) {
       try {
-        console.log(`🎯 Trying Pocket Option Direct API with SSID...`);
-        const client = createPocketOptionDirectClient(this.ssid);
+        console.log(`🎯 Trying Pocket Option Direct API...`);
+        const client = createPocketOptionDirectClient(this.ssid, this.email, this.password);
         const candles = await client.getM5Candles(symbol, count);
         
         if (candles && candles.length > 0) {
