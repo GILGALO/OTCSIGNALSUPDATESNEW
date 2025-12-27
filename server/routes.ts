@@ -38,7 +38,13 @@ export async function registerRoutes(
   // Validate SSID and get current price
   app.post("/api/validate-ssid", async (req, res) => {
     try {
-      const { ssid, email, password } = validateSSIDSchema.parse(req.body);
+      const { ssid: bodySSID, email: bodyEmail, password: bodyPassword } = validateSSIDSchema.parse(req.body);
+      
+      // Use provided credentials or fall back to environment variables
+      const ssid = bodySSID || process.env.POCKET_OPTION_SSID;
+      const email = bodyEmail || process.env.POCKET_OPTION_EMAIL;
+      const password = bodyPassword || process.env.POCKET_OPTION_PASSWORD;
+      
       const displaySSID = ssid ? `${ssid.substring(0, 3)}...${ssid.substring(ssid.length - 3)}` : "None";
       console.log(`🔐 Validating Access (SSID: ${displaySSID}, Email: ${email || "None"})`);
       
@@ -84,7 +90,12 @@ export async function registerRoutes(
     try {
       const parsed = generateSignalSchema.parse(req.body);
       symbol = parsed.symbol;
-      const { ssid, email, password, source, telegramToken, channelId } = parsed;
+      let { ssid, email, password, source, telegramToken, channelId } = parsed;
+      
+      // Use provided credentials or fall back to environment variables
+      ssid = ssid || process.env.POCKET_OPTION_SSID;
+      email = email || process.env.POCKET_OPTION_EMAIL;
+      password = password || process.env.POCKET_OPTION_PASSWORD;
       
       // PREVENT RECURSIVE LOOPS: If this is an AUTO request, ensure we don't trigger another one immediately
       console.log(`🔍 [SIGNAL] Starting scan for ${symbol} (Source: ${source})`);
