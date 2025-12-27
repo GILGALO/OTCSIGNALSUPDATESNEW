@@ -3,6 +3,7 @@
 
 import { createPocketOptionAPIClient } from './pocket-option-api';
 import { getPocketOptionBrowserClient } from './pocket-option-browser';
+import { createPocketOptionDirectClient } from './pocket-option-direct';
 
 interface CandleData {
   timestamp: number;
@@ -25,10 +26,29 @@ export class PocketOptionClient {
   }
 
   async getM5Candles(symbol: string, count: number = 50): Promise<CandleData[]> {
-    console.log(`🔄 [MARKET DATA] Fetching REAL market data for ${symbol}...`);
+    console.log(`🔄 Attempting to fetch REAL data...`);
     
+    // FIRST: Try Pocket Option Direct API with SSID (if available)
+    if (this.ssid) {
+      try {
+        console.log(`🎯 Trying Pocket Option Direct API with SSID...`);
+        const client = createPocketOptionDirectClient(this.ssid);
+        const candles = await client.getM5Candles(symbol, count);
+        
+        if (candles && candles.length > 0) {
+          console.log(`✅ SUCCESS! Fetched ${candles.length} REAL candles from Pocket Option!`);
+          return candles;
+        }
+      } catch (error) {
+        console.warn(
+          `⚠️ Pocket Option Direct API failed: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    }
+
+    // FALLBACK: Use reliable market data APIs (Alpha Vantage, CoinGecko)
+    console.log(`📡 Falling back to real market data (Alpha Vantage/CoinGecko)...`);
     try {
-      // Use real market data APIs instead of browser automation
       const { fetchRealMarketData } = await import('./real-market-data');
       const candles = await fetchRealMarketData(symbol, count);
       
@@ -36,11 +56,11 @@ export class PocketOptionClient {
         throw new Error("No candles received from market data source");
       }
       
-      console.log(`✅ Received ${candles.length} REAL market candles for ${symbol}`);
+      console.log(`✅ Received ${candles.length} real market candles from Alpha Vantage/CoinGecko for ${symbol}`);
       return candles;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      throw new Error(`Failed to fetch real market data for ${symbol}: ${errorMsg}\nPlease ensure trading pair exists and market data APIs are accessible.`);
+      throw new Error(`Failed to fetch real market data for ${symbol}: ${errorMsg}`);
     }
   }
 
